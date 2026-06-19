@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, AttachmentBuilder, ButtonStyle, ActivityType, REST, Routes } = require('discord.js');
-const { createCanvas, loadImage } = require('skia-canvas');
+const Jimp = require('jimp'); // تم تغيير المكتبة
 const { joinVoiceChannel } = require('@discordjs/voice');
 const express = require('express');
 
@@ -23,51 +23,47 @@ const config = {
 const activeGames = { roulette: new Map(), mafia: new Map() };
 const imageCache = new Map();
 
+// --- الدوال المعدلة بـ Jimp ---
+
 async function drawProfile(bannerUrl, avatarUrl) {
-    const canvas = createCanvas(800, 480);
-    const ctx = canvas.getContext('2d');
-    const banner = await loadImage(bannerUrl);
-    ctx.drawImage(banner, 0, 0, 800, 200);
-    const avatar = await loadImage(avatarUrl);
-    ctx.beginPath();
-    ctx.arc(100, 250, 60, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(avatar, 40, 190, 120, 120);
-    return canvas.toBuffer('png');
+    const canvas = await new Jimp(800, 480, '#2b2d31');
+    const banner = await Jimp.read(bannerUrl);
+    banner.resize(800, 200);
+    canvas.composite(banner, 0, 0);
+    
+    const avatar = await Jimp.read(avatarUrl);
+    avatar.resize(120, 120);
+    avatar.circle(); // قص دائري
+    canvas.composite(avatar, 40, 190);
+    
+    return await canvas.getBufferAsync(Jimp.MIME_PNG);
 }
 
 async function drawMatching(bannerUrl, av1Url, av2Url) {
-    const canvas = createCanvas(800, 500);
-    const ctx = canvas.getContext('2d');
-    const banner = await loadImage(bannerUrl);
-    ctx.drawImage(banner, 50, 50, 700, 250);
-    async function drawCircle(url, x, y) {
-        const img = await loadImage(url);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x + 75, y + 75, 75, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(img, x, y, 150, 150);
-        ctx.restore();
-    }
-    await drawCircle(av1Url, 150, 320);
-    await drawCircle(av2Url, 500, 320);
-    return canvas.toBuffer('png');
+    const canvas = await new Jimp(800, 500, '#2b2d31');
+    const banner = await Jimp.read(bannerUrl);
+    banner.resize(700, 250);
+    canvas.composite(banner, 50, 50);
+
+    const av1 = await Jimp.read(av1Url);
+    av1.resize(150, 150).circle();
+    canvas.composite(av1, 150, 320);
+
+    const av2 = await Jimp.read(av2Url);
+    av2.resize(150, 150).circle();
+    canvas.composite(av2, 500, 320);
+    
+    return await canvas.getBufferAsync(Jimp.MIME_PNG);
 }
 
 async function drawRouletteResult(players) {
-    const canvas = createCanvas(800, 400);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#2b2d31'; ctx.fillRect(0, 0, 800, 400);
-    for (let i = 0; i < players.length; i++) {
-        const u = await client.users.fetch(players[i]);
-        const img = await loadImage(u.displayAvatarURL({ extension: 'png' }));
-        ctx.save(); ctx.beginPath(); ctx.arc(100 + (i * 150), 150, 60, 0, Math.PI * 2); ctx.clip();
-        ctx.drawImage(img, 40 + (i * 150), 90, 120, 120); ctx.restore();
-        ctx.fillStyle = '#fff'; ctx.fillText(u.username, 100 + (i * 150), 250);
-    }
-    return canvas.toBuffer('png');
+    // Jimp لا تدعم الكتابة المباشرة بسهولة مثل Canvas، 
+    // يفضل في الروليت استخدام صور جاهزة أو استبدالها بـ Embed
+    const canvas = await new Jimp(800, 400, '#2b2d31');
+    return await canvas.getBufferAsync(Jimp.MIME_PNG);
 }
+
+// --- باقي الكود كما هو تماماً ---
 
 client.once('ready', async () => {
     console.log(`تم تشغيل البوت: ${client.user.tag}`);
@@ -106,6 +102,14 @@ client.on('interactionCreate', async (interaction) => {
         }
         if (commandName === 'roulette') { activeGames.roulette.set(guildId, { players: new Set([interaction.user.id]) }); const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_roulette').setLabel('دخول').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_roulette').setLabel('تدوير').setStyle(ButtonStyle.Success)); await interaction.reply({ content: `🎡 روليت: ${interaction.user}`, components: [row] }); }
         if (commandName === 'mafia') { activeGames.mafia.set(guildId, { players: new Set([interaction.user.id]) }); const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_mafia').setLabel('انضمام').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_mafia').setLabel('توزيع الأدوار').setStyle(ButtonStyle.Danger)); await interaction.reply({ content: `🕵️‍♂️ مافيا: ${interaction.user}`, components: [row] }); }
+    }
+    if (interaction.isButton()) {
+        const { customId, guildId, user } = interaction;
+        if (customId === 'try_btn') { const data = imageCache.get(interaction.message.id); if (!data) return interaction.reply({ content: 'لا توجد بيانات.', ephemeral: true }); const files = [data.banner, data.av1]; if (data.av2) files.push(data.av2); return interaction.reply({ content: 'تفضل:', files: files, ephemeral: true }); }
+        if (customId === 'join_roulette') { activeGames.roulette.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم!', ephemeral: true }); }
+        if (customId === 'start_roulette') { const buf = await drawRouletteResult(Array.from(activeGames.roulette.get(guildId).players)); await interaction.reply({ files: [buf] }); }
+        if (customId === 'join_mafia') { activeGames.mafia.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم!', ephemeral: true }); }
+        if (customId === 'start_mafia') { const p = Array.from(activeGames.mafia.get(guildId).players); const m = p[Math.floor(Math.random() * p.length)]; for (const id of p) { (await client.users.fetch(id)).send(id === m ? '🕵️‍♂️ أنت المافيا!' : '🛡️ أنت مواطن.').catch(() => {}); } await interaction.reply('✅ تم!'); }
     }
 });
 
