@@ -1,8 +1,9 @@
-build-essential
-libcairo2-dev
-libpango1.0-dev
-libjpeg-dev
-libgif-dev
-librsvg2-dev
-libfontconfig1-dev
-libpixman-1-dev
+libfontconfig1
+
+libpixman-1-0
+
+libcairo2
+
+libpango-1.0-0
+
+libpangocairo-1.0-0
