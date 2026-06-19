@@ -80,36 +80,82 @@ client.on('interactionCreate', async (interaction) => {
             activeGames.mafia.set(guildId, { players: new Set([interaction.user.id]) });
             const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_mafia').setLabel('انضمام').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_mafia').setLabel('توزيع الأدوار').setStyle(ButtonStyle.Danger));
             await interaction.reply({ content: `🕵️‍♂️ مافيا: ${interaction.user}`, components: [row] });
-        }
-        if (commandName === 'matching') {
-            await interaction.reply({ content: '⏳ جاري التصميم...', ephemeral: true });
-            const template = await loadImage(options.getAttachment('template').url);
-            const canvas = createCanvas(1200, 700);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(template, 0, 0, 1200, 700);
-            const drawCircularImage = async (url, x, y, size) => {
-                const img = await loadImage(url);
-                ctx.save(); ctx.beginPath(); ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-                ctx.closePath(); ctx.clip(); ctx.drawImage(img, x, y, size, size); ctx.restore();
-            };
-            await drawCircularImage(options.getAttachment('avatar_1').url, 150, 400, 250);
-            await drawCircularImage(options.getAttachment('avatar_2').url, 800, 400, 250);
-            const targetChannel = await client.channels.fetch(config.matchingRoomId);
-            await targetChannel.send({ files: [{ attachment: canvas.toBuffer('image/png'), name: 'matching.png' }] });
-            await interaction.editReply({ content: '✅ تم إرسال الماتشينق!' });
-        }
-        if (commandName === 'افتار') {
-            await interaction.reply({ content: '⏳ جاري تصميم البروفايل...', ephemeral: true });
-            const template = await loadImage(options.getAttachment('template').url);
-            const canvas = createCanvas(1200, 700);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(template, 0, 0, 1200, 700);
-            const avatar = await loadImage(interaction.user.displayAvatarURL({ extension: 'png' }));
-            ctx.save(); ctx.beginPath(); ctx.arc(200, 500, 125, 0, Math.PI * 2);
-            ctx.closePath(); ctx.clip(); ctx.drawImage(avatar, 75, 375, 250, 250); ctx.restore();
-            const targetChannel = await client.channels.fetch("1501583456872829068");
-            await targetChannel.send({ files: [{ attachment: canvas.toBuffer('image/png'), name: 'profile.png' }] });
-            await interaction.editReply({ content: '✅ تم إرسال الأفتار للروم المطلوب!' });
+        }const { Client, SlashCommandBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { createCanvas, loadImage } = require('canvas');
+
+// تخزين مؤقت للروابط للزر (رقم الرسالة هو المفتاح)
+const imageCache = new Map();
+
+// --- دالة رسم كارت البروفايل ---
+async function drawProfile(bannerUrl, avatarUrl) {
+    const canvas = createCanvas(800, 480);
+    const ctx = canvas.getContext('2d');
+    const banner = await loadImage(bannerUrl);
+    ctx.drawImage(banner, 0, 0, 800, 200);
+    const avatar = await loadImage(avatarUrl);
+    ctx.beginPath();
+    ctx.arc(100, 250, 60, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(avatar, 40, 190, 120, 120);
+    return canvas.toBuffer();
+}
+
+// --- دالة رسم كارت الماتشينق ---
+async function drawMatching(bannerUrl, av1Url, av2Url) {
+    const canvas = createCanvas(800, 500);
+    const ctx = canvas.getContext('2d');
+    const banner = await loadImage(bannerUrl);
+    ctx.drawImage(banner, 50, 50, 700, 250);
+    
+    async function drawCircle(url, x, y) {
+        const img = await loadImage(url);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + 75, y + 75, 75, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, x, y, 150, 150);
+        ctx.restore();
+    }
+    await drawCircle(av1Url, 150, 320);
+    await drawCircle(av2Url, 500, 320);
+    return canvas.toBuffer();
+}
+
+// --- تنفيذ الأوامر ---
+async function handleCommands(interaction) {
+    if (!interaction.isChatInputCommand()) return;
+
+    const isMatching = interaction.commandName === 'matching';
+    const banner = interaction.options.getAttachment('banner');
+    const av1 = interaction.options.getAttachment('avatar1');
+    const av2 = isMatching ? interaction.options.getAttachment('avatar2') : null;
+    const channelId = isMatching ? '1516548178382688408' : '1501583456872829068';
+    
+    const buffer = isMatching ? await drawMatching(banner.url, av1.url, av2.url) : await drawProfile(banner.url, av1.url);
+    const attachment = new AttachmentBuilder(buffer, { name: 'card.png' });
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('try_btn').setLabel('Try').setEmoji('1513336672870469793').setStyle(ButtonStyle.Primary)
+    );
+
+    const channel = interaction.client.channels.cache.get(channelId);
+    const sentMsg = await channel.send({ files: [attachment], components: [row] });
+    
+    // حفظ الروابط في الكاش
+    imageCache.set(sentMsg.id, { banner: banner.url, av1: av1.url, av2: av2?.url });
+    await interaction.reply({ content: 'تم الإرسال للروم!', ephemeral: true });
+}
+
+// --- معالجة زر الـ Try ---
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isButton()) return;
+    const data = imageCache.get(interaction.message.id);
+    if (!data) return interaction.reply({ content: 'عذراً، البيانات لم تعد موجودة.', ephemeral: true });
+
+    const files = [data.banner, data.av1];
+    if (data.av2) files.push(data.av2);
+    
+    await interaction.reply({ content: 'تفضل، هذه هي الملفات الأصلية:', files: files, ephemeral: true });
+});
         }
     }
     if (interaction.isButton()) {
