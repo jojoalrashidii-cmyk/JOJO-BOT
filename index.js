@@ -122,10 +122,6 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
-const { Client, GatewayIntentBits, Partials, ActivityType } = require('discord.js');
-const express = require('express'); // 1. استدعاء express
-const app = express();
-const port = 3000;
 
 // سيرفر بسيط عشان الـ UptimeRobot
 app.get('/', (req, res) => res.send('البوت شغال 24/7!'));
