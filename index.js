@@ -12,7 +12,7 @@ const config = {
     profileRoomId: "1501583456872829068",
     autoJoinRoomId: "123456789012345678",
     colorRoomId: "1515250871313408142"
-};
+}; // تأكدي أن هذا القوس موجود ومغلق هنا
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
