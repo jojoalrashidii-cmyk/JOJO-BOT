@@ -3,9 +3,11 @@ const {
     ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, 
     ActivityType, REST, Routes, AttachmentBuilder 
 } = require('discord.js');
-const { createCanvas, loadImage } = require('canvas');
+
+const { createCanvas, loadImage } = require('canvas'); // هنا السطر اللي سألتي عنه
 const { joinVoiceChannel } = require('@discordjs/voice');
 const express = require('express');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
