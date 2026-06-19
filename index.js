@@ -1,7 +1,7 @@
 const {
     Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder,
     ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
-    ActivityType
+    ActivityType, REST, Routes
 } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { joinVoiceChannel } = require('@discordjs/voice');
@@ -21,6 +21,31 @@ const client = new Client({
 
 const activeGames = { roulette: new Map(), mafia: new Map() };
 
+client.once('ready', async () => {
+    console.log(`تم تشغيل البوت: ${client.user.tag}`);
+    client.user.setActivity('JOJO’s System', { type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' });
+
+    // كود تسجيل الأوامر
+    const commands = [
+        { name: 'panel', description: 'عرض لوحة التحكم' },
+        { name: 'roulette', description: 'بدء لعبة الروليت' },
+        { name: 'mafia', description: 'بدء لعبة المافيا' },
+        { name: 'matching', description: 'تصميم الماتشينق' },
+        { name: 'افتار', description: 'تصميم الأفتار' }
+    ];
+
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+    try {
+        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+        console.log('✅ تم تسجيل الأوامر بنجاح!');
+    } catch (e) { console.error(e); }
+
+    try {
+        const channel = await client.channels.fetch(config.autoJoinRoomId);
+        if (channel) joinVoiceChannel({ channelId: channel.id, guildId: channel.guild.id, adapterCreator: channel.guild.voiceAdapterCreator });
+    } catch (e) {}
+});
+
 async function drawRouletteResult(players) {
     const canvas = createCanvas(800, 400);
     const ctx = canvas.getContext('2d');
@@ -35,37 +60,24 @@ async function drawRouletteResult(players) {
     return canvas.toBuffer('image/png');
 }
 
-client.once('ready', async () => {
-    console.log(`تم تشغيل البوت: ${client.user.tag}`);
-    client.user.setActivity('JOJO’s System', { type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' });
-    try {
-        const channel = await client.channels.fetch(config.autoJoinRoomId);
-        if (channel) joinVoiceChannel({ channelId: channel.id, guildId: channel.guild.id, adapterCreator: channel.guild.voiceAdapterCreator });
-    } catch (e) {}
-});
-
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isChatInputCommand()) {
         const { commandName, guildId, options } = interaction;
-
         if (commandName === 'panel') {
             const panelEmbed = new EmbedBuilder().setColor('#2b2d31').setDescription("JOJO'S control panel").setImage(config.panelImage);
             const colorRow = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('color_select').setPlaceholder('اختر لونك').addOptions([new StringSelectMenuOptionBuilder().setLabel('روم الألوان').setValue('goto_colors')]));
             await interaction.reply({ embeds: [panelEmbed], components: [colorRow] });
         }
-
         if (commandName === 'roulette') {
             activeGames.roulette.set(guildId, { players: new Set([interaction.user.id]) });
             const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_roulette').setLabel('دخول').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_roulette').setLabel('تدوير').setStyle(ButtonStyle.Success));
             await interaction.reply({ content: `🎡 روليت: ${interaction.user}`, components: [row] });
         }
-
         if (commandName === 'mafia') {
             activeGames.mafia.set(guildId, { players: new Set([interaction.user.id]) });
             const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_mafia').setLabel('انضمام').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_mafia').setLabel('توزيع الأدوار').setStyle(ButtonStyle.Danger));
             await interaction.reply({ content: `🕵️‍♂️ مافيا: ${interaction.user}`, components: [row] });
         }
-
         if (commandName === 'matching') {
             await interaction.reply({ content: '⏳ جاري التصميم...', ephemeral: true });
             const template = await loadImage(options.getAttachment('template').url);
@@ -83,7 +95,6 @@ client.on('interactionCreate', async (interaction) => {
             await targetChannel.send({ files: [{ attachment: canvas.toBuffer('image/png'), name: 'matching.png' }] });
             await interaction.editReply({ content: '✅ تم إرسال الماتشينق!' });
         }
-
         if (commandName === 'افتار') {
             await interaction.reply({ content: '⏳ جاري تصميم البروفايل...', ephemeral: true });
             const template = await loadImage(options.getAttachment('template').url);
@@ -98,7 +109,6 @@ client.on('interactionCreate', async (interaction) => {
             await interaction.editReply({ content: '✅ تم إرسال الأفتار للروم المطلوب!' });
         }
     }
-
     if (interaction.isButton()) {
         const { customId, guildId, user } = interaction;
         if (customId === 'join_roulette') { activeGames.roulette.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم الدخول!', ephemeral: true }); }
