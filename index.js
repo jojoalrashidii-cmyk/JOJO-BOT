@@ -122,5 +122,24 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
+const { Client, GatewayIntentBits, Partials, ActivityType } = require('discord.js');
+const express = require('express'); // 1. استدعاء express
+const app = express();
+const port = 3000;
+
+// سيرفر بسيط عشان الـ UptimeRobot
+app.get('/', (req, res) => res.send('البوت شغال 24/7!'));
+app.listen(port, () => console.log(`السيرفر يعمل على المنفذ ${port}`));
+
+// باقي الكود الخاص بك...
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMembers],
+    partials: [Partials.Channel, Partials.Message, Partials.User]
+});
+
+// ... (هنا ضع بقية الكود الخاص بك من أول client.once إلى ما قبل تسجيل الدخول)
+
+// 2. تسجيل الدخول باستخدام المتغير البيئي (Environment Variable)
 
 client.login(process.env.TOKEN);
+
