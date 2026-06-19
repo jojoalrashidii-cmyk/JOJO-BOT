@@ -1,18 +1,26 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { createCanvas, loadImage } = require('skia-canvas');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const express = require('express');
 
+// تعريف الـ client
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    partials: [Partials.Channel, Partials.Message]
+});
+
+// إعدادات الـ express
 const app = express();
 const port = process.env.PORT || 3000;
 
+// إعدادات الـ config
 const config = {
-    panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/1515559849436516382/pane1.png",
     matchingRoomId: "1516548178382688408",
     profileRoomId: "1501583456872829068",
     autoJoinRoomId: "123456789012345678",
-    colorRoomId: "1515250871313408142"
+    colorRoomId: "1515250871313408142",
+    panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/15155559849436516382/panel.png"
 }; // تأكدي أن هذا القوس موجود ومغلق هنا
 
 const client = new Client({
