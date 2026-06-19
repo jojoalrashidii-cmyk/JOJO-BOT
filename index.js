@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, But
 const { createCanvas, loadImage } = require('canvas');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const express = require('express');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -102,9 +103,19 @@ client.on('interactionCreate', async (interaction) => {
             const panelEmbed = new EmbedBuilder().setColor('#2b2d31').setDescription("JOJO'S control panel").setImage(config.panelImage);
             await interaction.reply({ embeds: [panelEmbed] });
         }
+        if (commandName === 'roulette') { activeGames.roulette.set(guildId, { players: new Set([interaction.user.id]) }); const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_roulette').setLabel('دخول').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_roulette').setLabel('تدوير').setStyle(ButtonStyle.Success)); await interaction.reply({ content: `🎡 روليت: ${interaction.user}`, components: [row] }); }
+        if (commandName === 'mafia') { activeGames.mafia.set(guildId, { players: new Set([interaction.user.id]) }); const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_mafia').setLabel('انضمام').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_mafia').setLabel('توزيع الأدوار').setStyle(ButtonStyle.Danger)); await interaction.reply({ content: `🕵️‍♂️ مافيا: ${interaction.user}`, components: [row] }); }
+    }
+    if (interaction.isButton()) {
+        const { customId, guildId, user } = interaction;
+        if (customId === 'try_btn') { const data = imageCache.get(interaction.message.id); if (!data) return interaction.reply({ content: 'لا توجد بيانات.', ephemeral: true }); const files = [data.banner, data.av1]; if (data.av2) files.push(data.av2); return interaction.reply({ content: 'تفضل:', files: files, ephemeral: true }); }
+        if (customId === 'join_roulette') { activeGames.roulette.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم!', ephemeral: true }); }
+        if (customId === 'start_roulette') { const buf = await drawRouletteResult(Array.from(activeGames.roulette.get(guildId).players)); await interaction.reply({ files: [buf] }); }
+        if (customId === 'join_mafia') { activeGames.mafia.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم!', ephemeral: true }); }
+        if (customId === 'start_mafia') { const p = Array.from(activeGames.mafia.get(guildId).players); const m = p[Math.floor(Math.random() * p.length)]; for (const id of p) { (await client.users.fetch(id)).send(id === m ? '🕵️‍♂️ أنت المافيا!' : '🛡️ أنت مواطن.').catch(() => {}); } await interaction.reply('✅ تم!'); }
     }
 });
 
-app.get('/', (req, res) => res.send('البوت شغال!'));
+app.get('/', (req, res) => res.send('البوت يعمل!'));
 app.listen(port, () => console.log(`السيرفر يعمل على ${port}`));
 client.login(process.env.TOKEN);
