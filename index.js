@@ -4,25 +4,24 @@ const { createCanvas, loadImage } = require('skia-canvas');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const express = require('express');
 
-// تعريف الـ client
+// هذا هو التعريف الوحيد للـ client، لا تكرريه!
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
     partials: [Partials.Channel, Partials.Message]
 });
 
-// إعدادات الـ express
 const app = express();
 const port = process.env.PORT || 3000;
 
-// إعدادات الـ config
 const config = {
     matchingRoomId: "1516548178382688408",
     profileRoomId: "1501583456872829068",
     autoJoinRoomId: "123456789012345678",
     colorRoomId: "1515250871313408142",
     panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/15155559849436516382/panel.png"
-}; // تأكدي أن هذا القوس موجود ومغلق هنا
+};
 
+// ... هنا تكملين بقية كود البوت الخاص بكِ
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
     partials: [Partials.Channel, Partials.Message, Partials.User]
