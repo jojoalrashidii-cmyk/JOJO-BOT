@@ -5,6 +5,9 @@ const {
 } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { joinVoiceChannel } = require('@discordjs/voice');
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
 
 const config = {
     panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/1515559849436516382/panel.png",
@@ -123,19 +126,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// سيرفر بسيط عشان الـ UptimeRobot
 app.get('/', (req, res) => res.send('البوت شغال 24/7!'));
 app.listen(port, () => console.log(`السيرفر يعمل على المنفذ ${port}`));
 
-// باقي الكود الخاص بك...
-client = new Client({ ... });
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMembers],
-    partials: [Partials.Channel, Partials.Message, Partials.User]
-});
-
-// ... (هنا ضع بقية الكود الخاص بك من أول client.once إلى ما قبل تسجيل الدخول)
-
-// 2. تسجيل الدخول باستخدام المتغير البيئي (Environment Variable)
-
 client.login(process.env.TOKEN);
-
