@@ -11,13 +11,13 @@ const express = require('express');
 const app = express(); 
 const port = process.env.PORT || 3000; 
 
-const config = {  
-    panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/1515559849436516382/pane1.png",  
-    matchingRoomId: "1516548178382688408",  
-    profileRoomId: "1501583456872829068",  
-    autoJoinRoomId: "123456789012345678",  
-    colorRoomId: "1515250871313408142"  
-}; 
+const config = { 
+    panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/1515559849436516382/pane1.png", 
+    matchingRoomId: "1516548178382688408", 
+    profileRoomId: "1501583456872829068", 
+    autoJoinRoomId: "123456789012345678", 
+    colorRoomId: "1515250871313408142" 
+};
 
 const client = new Client({  
     intents: [  
