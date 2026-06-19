@@ -1,13 +1,12 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, AttachmentBuilder, ButtonStyle, ActivityType, REST, Routes } = require('discord.js');
 const { createCanvas, loadImage } = require('skia-canvas');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const express = require('express');
 
-// هذا هو التعريف الوحيد للـ client، لا تكرريه!
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
-    partials: [Partials.Channel, Partials.Message]
+    partials: [Partials.Channel, Partials.Message, Partials.User]
 });
 
 const app = express();
@@ -20,11 +19,6 @@ const config = {
     colorRoomId: "1515250871313408142",
     panelImage: "https://cdn.discordapp.com/attachments/1035223472898584727/15155559849436516382/panel.png"
 };
-
-// ... هنا تكملين بقية كود البوت الخاص بكِ
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
-    partials: [Partials.Channel, Partials.Message, Partials.User]
-});
 
 const activeGames = { roulette: new Map(), mafia: new Map() };
 const imageCache = new Map();
@@ -39,7 +33,7 @@ async function drawProfile(bannerUrl, avatarUrl) {
     ctx.arc(100, 250, 60, 0, Math.PI * 2);
     ctx.clip();
     ctx.drawImage(avatar, 40, 190, 120, 120);
-    return canvas.toBuffer();
+    return canvas.toBuffer('png');
 }
 
 async function drawMatching(bannerUrl, av1Url, av2Url) {
@@ -58,7 +52,7 @@ async function drawMatching(bannerUrl, av1Url, av2Url) {
     }
     await drawCircle(av1Url, 150, 320);
     await drawCircle(av2Url, 500, 320);
-    return canvas.toBuffer();
+    return canvas.toBuffer('png');
 }
 
 async function drawRouletteResult(players) {
@@ -72,7 +66,7 @@ async function drawRouletteResult(players) {
         ctx.drawImage(img, 40 + (i * 150), 90, 120, 120); ctx.restore();
         ctx.fillStyle = '#fff'; ctx.fillText(u.username, 100 + (i * 150), 250);
     }
-    return canvas.toBuffer('image/png');
+    return canvas.toBuffer('png');
 }
 
 client.once('ready', async () => {
@@ -112,14 +106,6 @@ client.on('interactionCreate', async (interaction) => {
         }
         if (commandName === 'roulette') { activeGames.roulette.set(guildId, { players: new Set([interaction.user.id]) }); const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_roulette').setLabel('دخول').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_roulette').setLabel('تدوير').setStyle(ButtonStyle.Success)); await interaction.reply({ content: `🎡 روليت: ${interaction.user}`, components: [row] }); }
         if (commandName === 'mafia') { activeGames.mafia.set(guildId, { players: new Set([interaction.user.id]) }); const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('join_mafia').setLabel('انضمام').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('start_mafia').setLabel('توزيع الأدوار').setStyle(ButtonStyle.Danger)); await interaction.reply({ content: `🕵️‍♂️ مافيا: ${interaction.user}`, components: [row] }); }
-    }
-    if (interaction.isButton()) {
-        const { customId, guildId, user } = interaction;
-        if (customId === 'try_btn') { const data = imageCache.get(interaction.message.id); if (!data) return interaction.reply({ content: 'لا توجد بيانات.', ephemeral: true }); const files = [data.banner, data.av1]; if (data.av2) files.push(data.av2); return interaction.reply({ content: 'تفضل:', files: files, ephemeral: true }); }
-        if (customId === 'join_roulette') { activeGames.roulette.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم!', ephemeral: true }); }
-        if (customId === 'start_roulette') { const buf = await drawRouletteResult(Array.from(activeGames.roulette.get(guildId).players)); await interaction.reply({ files: [buf] }); }
-        if (customId === 'join_mafia') { activeGames.mafia.get(guildId)?.players.add(user.id); await interaction.reply({ content: 'تم!', ephemeral: true }); }
-        if (customId === 'start_mafia') { const p = Array.from(activeGames.mafia.get(guildId).players); const m = p[Math.floor(Math.random() * p.length)]; for (const id of p) { (await client.users.fetch(id)).send(id === m ? '🕵️‍♂️ أنت المافيا!' : '🛡️ أنت مواطن.').catch(() => {}); } await interaction.reply('✅ تم!'); }
     }
 });
 
