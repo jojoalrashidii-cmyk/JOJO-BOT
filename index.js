@@ -22,7 +22,6 @@ const config = {
 };
 
 // ... هنا تكملين بقية كود البوت الخاص بكِ
-const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
     partials: [Partials.Channel, Partials.Message, Partials.User]
 });
