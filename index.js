@@ -11,7 +11,8 @@ const config = {
     matchingRoomId: "1516548178382688408",
     profileRoomId: "1501583456872829068",
     autoJoinRoomId: "123456789012345678",
-    colorRoomId: "1515250871313408142"
+    colorRoomId: "1515250871313408142",
+    adminRoleId: "1501374221992071348" // الرتبة المسموح لها بالتصميم
 };
 
 const client = new Client({
@@ -22,7 +23,7 @@ const client = new Client({
 const activeGames = { roulette: new Map(), mafia: new Map() };
 const imageCache = new Map();
 
-// --- دوال الرسم (Canvas) ---
+// --- دوال الرسم ---
 
 async function drawProfile(bannerUrl, avatarUrl) {
     const canvas = createCanvas(800, 480);
@@ -30,7 +31,6 @@ async function drawProfile(bannerUrl, avatarUrl) {
     ctx.fillStyle = '#2b2d31'; ctx.fillRect(0, 0, 800, 480);
     const banner = await loadImage(bannerUrl);
     ctx.drawImage(banner, 0, 0, 800, 200);
-    
     ctx.beginPath();
     ctx.arc(100, 250, 60, 0, Math.PI * 2);
     ctx.clip();
@@ -45,7 +45,6 @@ async function drawMatching(bannerUrl, av1Url, av2Url) {
     ctx.fillStyle = '#2b2d31'; ctx.fillRect(0, 0, 800, 500);
     const banner = await loadImage(bannerUrl);
     ctx.drawImage(banner, 50, 50, 700, 250);
-
     const drawCircle = async (url, x, y) => {
         const img = await loadImage(url);
         ctx.save();
@@ -85,8 +84,8 @@ client.once('ready', async () => {
         { name: 'panel', description: 'عرض لوحة التحكم' },
         { name: 'roulette', description: 'بدء لعبة الروليت' },
         { name: 'mafia', description: 'بدء لعبة المافيا' },
-        { name: 'matching', description: 'تصميم الماتشينق', options: [{ name: 'banner', type: 11, description: 'البنر', required: true }, { name: 'avatar1', type: 11, description: 'الأفاتار 1', required: true }, { name: 'avatar2', type: 11, description: 'الأفاتار 2', required: true }] },
-        { name: 'افتار', description: 'تصميم الأفتار', options: [{ name: 'banner', type: 11, description: 'البنر', required: true }, { name: 'avatar1', type: 11, description: 'الأفاتار', required: true }] }
+        { name: 'matching', description: 'تصميم الماتشينق', options: [{ name: 'banner', type: 11, description: 'ارفع صورة البنر', required: true }, { name: 'avatar1', type: 11, description: 'ارفع صورة الأفاتار 1', required: true }, { name: 'avatar2', type: 11, description: 'ارفع صورة الأفاتار 2', required: true }] },
+        { name: 'افتار', description: 'تصميم الأفتار', options: [{ name: 'banner', type: 11, description: 'ارفع صورة البنر', required: true }, { name: 'avatar1', type: 11, description: 'ارفع صورة الأفاتار', required: true }] }
     ];
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try { await rest.put(Routes.applicationCommands(client.user.id), { body: commands }); console.log('✅ تم تسجيل الأوامر!'); } catch (e) { console.error(e); }
@@ -94,8 +93,13 @@ client.once('ready', async () => {
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isChatInputCommand()) {
-        const { commandName, guildId } = interaction;
+        const { commandName, guildId, member } = interaction;
+
+        // التحقق من الرتبة لأوامر التصميم
         if (commandName === 'افتار' || commandName === 'matching') {
+            if (!member.roles.cache.has(config.adminRoleId)) {
+                return interaction.reply({ content: '❌ عذراً، هذا الأمر مخصص فقط لأصحاب الرتبة المحددة.', ephemeral: true });
+            }
             const isMatching = commandName === 'matching';
             const banner = interaction.options.getAttachment('banner');
             const av1 = interaction.options.getAttachment('avatar1');
