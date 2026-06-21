@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType, Events, PermissionsBitField, ComponentType } = require('discord.js');
+const { Client, GatewayIntentBits, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType, Events, PermissionsBitField } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const express = require('express');
@@ -16,7 +16,6 @@ const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const EMOJI_ID = '1513336672870469793';
 const ROLE_ID = '1501374221992071348';
-const MY_USER_ID = '890586243346354216'; 
 const designCache = new Map();
 
 client.once('ready', async () => {
@@ -39,51 +38,52 @@ async function drawImageCover(ctx, img, x, y, w, h) {
 }
 
 async function createProfileCard(bannerUrl, avatarUrl, member) {
-    const canvas = createCanvas(800, 450);
+    const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
     
-    // خلفية
+    // خلفية سوداء
     ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, 800, 450);
+    ctx.fillRect(0, 0, 1000, 600);
     
     // بنر
     const banner = await loadImage(bannerUrl);
-    await drawImageCover(ctx, banner, 0, 0, 800, 250);
+    await drawImageCover(ctx, banner, 0, 0, 1000, 300);
     
     // أفاتار دائري
     ctx.save();
     ctx.beginPath();
-    ctx.arc(130, 250, 75, 0, Math.PI * 2);
+    ctx.arc(150, 400, 90, 0, Math.PI * 2);
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    await drawImageCover(ctx, avatar, 55, 175, 150, 150);
+    await drawImageCover(ctx, avatar, 60, 310, 180, 180);
     ctx.restore();
     
-    // الاسم
+    // --- منطقة النصوص ---
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px Arial';
-    ctx.fillText(member.user.username, 230, 270);
+    // اسم المستخدم
+    ctx.font = 'bold 45px Arial';
+    ctx.fillText(member.user.username, 270, 400);
     
-    // اليوزر
+    // اليوزر الفرعي
     ctx.fillStyle = '#888888';
-    ctx.font = '18px Arial';
-    ctx.fillText('@' + member.user.username.toLowerCase(), 230, 300);
+    ctx.font = '22px Arial';
+    ctx.fillText('@' + member.user.username.toLowerCase(), 270, 440);
     
     // خط فاصل
     ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(50, 360); ctx.lineTo(750, 360); ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(50, 500); ctx.lineTo(950, 500); ctx.stroke();
     
-    // تواريخ
+    // التواريخ
     ctx.fillStyle = '#777777';
-    ctx.font = 'bold 14px Arial';
-    ctx.fillText('MEMBER SINCE', 50, 390);
-    ctx.fillText('JOINED SERVER', 420, 390);
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('MEMBER SINCE', 50, 540);
+    ctx.fillText('JOINED SERVER', 500, 540);
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = '16px Arial';
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
+    ctx.font = '24px Arial';
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US'), 50, 575);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US'), 500, 575);
     
     return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
