@@ -1,77 +1,113 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, ActivityType, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const { createCanvas, loadImage } = require('canvas');
+const { Client, GatewayIntentBits, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType, Events } = require('discord.js');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const express = require('express'); // إضافة express
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const app = express();
+const port = process.env.PORT || 3000;
 
-client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-    
-    // Fake Streaming
+// تشغيل خادم بسيط لاستقبال طلبات Ping
+app.get('/', (req, res) => res.send('Bot is running!'));
+app.listen(port, () => console.log(`🚀 Web server running on port ${port}`));
+
+const client = new Client({ 
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] 
+});
+
+const TARGET_CHANNEL_ID = '1501583456872829068';
+const EMOJI_ID = '1513336672870469793';
+const ROLE_ID = '1501374221992071348';
+const designCache = new Map();
+
+client.once('ready', () => {
     client.user.setPresence({
-        activities: [{ 
-            name: 'Watching .e_9', 
-            type: ActivityType.Streaming,
-            url: 'https://www.twitch.tv/fajer' 
-        }],
+        activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }],
         status: 'online'
     });
 });
 
-client.on('messageCreate', async message => {
-    if (message.content === '!profile') {
-        const card = await createProfileCard(message.member);
-        const button = new ButtonBuilder()
-            .setCustomId('get_original_assets')
-            .setLabel('Try')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('1513336672870469793');
-
-        const row = new ActionRowBuilder().addComponents(button);
-        const targetChannel = message.guild.channels.cache.get('1501583456872829068');
-        
-        if (targetChannel) {
-            targetChannel.send({ files: [card], components: [row] });
-        }
+async function drawImageCover(ctx, img, x, y, w, h) {
+    const imgRatio = img.width / img.height;
+    const targetRatio = w / h;
+    let sWidth, sHeight, sx, sy;
+    if (imgRatio > targetRatio) {
+        sWidth = img.height * targetRatio;
+        sHeight = img.height;
+        sx = (img.width - sWidth) / 2;
+        sy = 0;
+    } else {
+        sWidth = img.width;
+        sHeight = img.width / targetRatio;
+        sx = 0;
+        sy = (img.height - sHeight) / 2;
     }
-});
+    ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
+}
 
-client.on('interactionCreate', async i => {
-    if (!i.isButton()) return;
-    if (i.customId === 'get_original_assets') {
-        const embed = new EmbedBuilder()
-            .setTitle('Original Assets')
-            .setImage(i.user.displayAvatarURL({ size: 1024 }))
-            .setDescription('هذه صورة الأفاتار الأصلية');
-        await i.reply({ embeds: [embed], ephemeral: true });
-    }
-});
-
-async function createProfileCard(member) {
+async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(800, 450);
     const ctx = canvas.getContext('2d');
-    
-    // الخلفية
-    ctx.fillStyle = '#121212';
+    ctx.fillStyle = '#0f0f0f';
     ctx.fillRect(0, 0, 800, 450);
-    ctx.fillStyle = '#1e1e1e';
-    ctx.fillRect(0, 0, 800, 200);
-
-    // الأفاتار
-    const avatar = await loadImage(member.user.displayAvatarURL({ extension: 'png' }));
+    const banner = await loadImage(bannerUrl);
+    await drawImageCover(ctx, banner, 0, 0, 800, 250);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(120, 200, 70, 0, Math.PI * 2);
+    ctx.arc(130, 250, 75, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(avatar, 50, 130, 140, 140);
+    const avatar = await loadImage(avatarUrl);
+    await drawImageCover(ctx, avatar, 55, 175, 150, 150);
     ctx.restore();
-
-    // النصوص
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 35px Sans-serif';
-    ctx.fillText(member.user.username, 220, 210);
-    
-    return new AttachmentBuilder(canvas.toBuffer(), { name: 'profile.png' });
+    ctx.font = 'bold 28px "Times New Roman", serif';
+    ctx.fillText(member.user.username, 230, 275);
+    ctx.fillStyle = '#888888';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('@' + member.user.username.toLowerCase(), 230, 305);
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(50, 360);
+    ctx.lineTo(750, 360);
+    ctx.stroke();
+    ctx.fillStyle = '#777777';
+    ctx.font = 'bold 16px "Times New Roman", serif';
+    ctx.fillText('MEMBER SINCE', 50, 390);
+    ctx.fillText('JOINED SERVER', 420, 390);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
+    return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
+
+client.on(Events.MessageCreate, async (message) => {
+    if (message.author.bot || !message.content.startsWith('!design')) return;
+    if (!message.member.roles.cache.has(ROLE_ID)) return;
+    if (message.attachments.size < 2) return;
+    
+    const att = Array.from(message.attachments.values());
+    const data = { bannerUrl: att[0].url, avatarUrl: att[1].url };
+    designCache.set(message.author.id, data);
+    
+    const card = await createProfileCard(data.bannerUrl, data.avatarUrl, message.member);
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('try_btn').setLabel('Try').setEmoji(EMOJI_ID).setStyle(ButtonStyle.Secondary)
+    );
+
+    const channel = client.channels.cache.get(TARGET_CHANNEL_ID);
+    await channel.send({ files: [card], components: [row] });
+});
+
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isButton() || interaction.customId !== 'try_btn') return;
+    const data = designCache.get(interaction.user.id);
+    if (!data) return interaction.reply({ content: '❌ لا توجد بيانات محفوظة.', ephemeral: true });
+    
+    await interaction.reply({ 
+        content: 'تفضل، هذه هي الصور الأصلية:', 
+        files: [data.bannerUrl, data.avatarUrl], 
+        ephemeral: true 
+    });
+});
 
 client.login(process.env.TOKEN);
