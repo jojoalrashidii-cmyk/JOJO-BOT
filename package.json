@@ -1,18 +1,17 @@
 {
   "name": "jojo-design-bot",
   "version": "1.0.0",
-  "description": "Bot for design and voice room management",
+  "description": "Bot for profile designs",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.15.3",
-    "@discordjs/voice": "^0.17.0",
-    "@napi-rs/canvas": "^0.1.65",
-    "express": "^4.19.2",
-    "libsodium-wrappers": "^0.7.15",
-    "dotenv": "^16.4.5"
+    "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.16.1",
+    "@napi-rs/canvas": "^0.1.46",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "engines": {
     "node": ">=20.0.0"
