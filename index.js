@@ -72,51 +72,47 @@ async function drawImageCover(ctx, img, x, y, w, h) {
 }
 
 async function createProfileCard(bannerUrl, avatarUrl, member) {
-    const canvas = createCanvas(800, 450);
+    const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
     
-    ctx.fillStyle = '#0a0a0a'; // خلفية سوداء داكنة
-    ctx.fillRect(0, 0, 800, 450);
+    ctx.fillStyle = '#0a0a0a'; 
+    ctx.fillRect(0, 0, 1000, 600);
     
     const banner = await loadImage(bannerUrl);
-    await drawImageCover(ctx, banner, 0, 0, 800, 250);
+    await drawImageCover(ctx, banner, 0, 0, 1000, 300);
     
     ctx.save();
     ctx.beginPath();
-    ctx.arc(130, 250, 75, 0, Math.PI * 2);
+    ctx.arc(150, 400, 90, 0, Math.PI * 2);
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    await drawImageCover(ctx, avatar, 55, 175, 150, 150);
+    await drawImageCover(ctx, avatar, 60, 310, 180, 180);
     ctx.restore();
     
-    // الاسم
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 30px "Times New Roman"';
-    ctx.fillText(member.user.username, 230, 275);
+    ctx.font = 'bold 45px "Times New Roman"';
+    ctx.fillText(member.user.username, 270, 400);
     
-    // المعرف
     ctx.fillStyle = '#888888';
-    ctx.font = '18px sans-serif';
-    ctx.fillText('@' + member.user.username.toLowerCase(), 230, 305);
+    ctx.font = '22px Arial';
+    ctx.fillText('@' + member.user.username.toLowerCase(), 270, 435);
     
-    // الخط الفاصل
-    ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(50, 360);
-    ctx.lineTo(750, 360);
+    ctx.moveTo(50, 500); 
+    ctx.lineTo(950, 500);
     ctx.stroke();
     
-    // التواريخ
     ctx.fillStyle = '#777777';
-    ctx.font = 'bold 14px "Times New Roman"';
-    ctx.fillText('MEMBER SINCE', 50, 390);
-    ctx.fillText('JOINED SERVER', 420, 390);
+    ctx.font = 'bold 18px "Times New Roman"';
+    ctx.fillText('MEMBER SINCE', 50, 540);
+    ctx.fillText('JOINED SERVER', 500, 540);
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = '16px "Times New Roman"';
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
+    ctx.font = '24px "Times New Roman"';
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 575);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 500, 575);
     
     return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
