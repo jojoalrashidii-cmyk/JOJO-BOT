@@ -9,13 +9,7 @@ app.get('/', (req, res) => res.send('Bot is running!'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({ 
-    intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent, 
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildVoiceStates
-    ] 
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates] 
 });
 
 const TARGET_CHANNEL_ID = '1501583456872829068';
@@ -26,31 +20,8 @@ const MY_USER_ID = '890586243346354216';
 const designCache = new Map();
 
 client.once('ready', async () => {
-    client.user.setPresence({
-        activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }],
-        status: 'online'
-    });
-    
-    console.log('✅ البوت متصل، جاري تأمين الروم...');
-    
-    const guild = client.guilds.cache.first();
-    if (guild) {
-        try {
-            const myUser = await guild.members.fetch(MY_USER_ID).catch(() => null);
-            const vc = guild.channels.cache.get(VOICE_CHANNEL_ID);
-            
-            if (vc) {
-                await vc.permissionOverwrites.set([
-                    { id: guild.id, deny: [PermissionsBitField.Flags.Connect], allow: [PermissionsBitField.Flags.ViewChannel] },
-                    { id: client.user.id, allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.ViewChannel] },
-                    ...(myUser ? [{ id: myUser.id, allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.ViewChannel] }] : [])
-                ]);
-
-                joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator });
-                console.log('🔒 تم تأمين الروم ودخول البوت.');
-            }
-        } catch (err) { console.error("❌ خطأ أثناء تأمين الروم: ", err); }
-    }
+    client.user.setPresence({ activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }], status: 'online' });
+    console.log('✅ البوت جاهز!');
 });
 
 async function drawImageCover(ctx, img, x, y, w, h) {
@@ -58,61 +29,61 @@ async function drawImageCover(ctx, img, x, y, w, h) {
     const targetRatio = w / h;
     let sWidth, sHeight, sx, sy;
     if (imgRatio > targetRatio) {
-        sWidth = img.height * targetRatio;
-        sHeight = img.height;
-        sx = (img.width - sWidth) / 2;
-        sy = 0;
+        sWidth = img.height * targetRatio; sHeight = img.height;
+        sx = (img.width - sWidth) / 2; sy = 0;
     } else {
-        sWidth = img.width;
-        sHeight = img.width / targetRatio;
-        sx = 0;
-        sy = (img.height - sHeight) / 2;
+        sWidth = img.width; sHeight = img.width / targetRatio;
+        sx = 0; sy = (img.height - sHeight) / 2;
     }
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
 }
 
 async function createProfileCard(bannerUrl, avatarUrl, member) {
-    const canvas = createCanvas(1000, 600);
+    const canvas = createCanvas(800, 450);
     const ctx = canvas.getContext('2d');
     
-    ctx.fillStyle = '#0a0a0a'; 
-    ctx.fillRect(0, 0, 1000, 600);
+    // خلفية
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, 800, 450);
     
+    // بنر
     const banner = await loadImage(bannerUrl);
-    await drawImageCover(ctx, banner, 0, 0, 1000, 300);
+    await drawImageCover(ctx, banner, 0, 0, 800, 250);
     
+    // أفاتار دائري
     ctx.save();
     ctx.beginPath();
-    ctx.arc(150, 400, 90, 0, Math.PI * 2);
+    ctx.arc(130, 250, 75, 0, Math.PI * 2);
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    await drawImageCover(ctx, avatar, 60, 310, 180, 180);
+    await drawImageCover(ctx, avatar, 55, 175, 150, 150);
     ctx.restore();
     
+    // الاسم
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 45px "Times New Roman"';
-    ctx.fillText(member.user.username, 270, 400);
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText(member.user.username, 230, 270);
     
+    // اليوزر
     ctx.fillStyle = '#888888';
-    ctx.font = '22px Arial';
-    ctx.fillText('@' + member.user.username.toLowerCase(), 270, 435);
+    ctx.font = '18px Arial';
+    ctx.fillText('@' + member.user.username.toLowerCase(), 230, 300);
     
-    ctx.strokeStyle = '#222222';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(50, 500); 
-    ctx.lineTo(950, 500);
-    ctx.stroke();
+    // خط فاصل
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(50, 360); ctx.lineTo(750, 360); ctx.stroke();
     
+    // تواريخ
     ctx.fillStyle = '#777777';
-    ctx.font = 'bold 18px "Times New Roman"';
-    ctx.fillText('MEMBER SINCE', 50, 540);
-    ctx.fillText('JOINED SERVER', 500, 540);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('MEMBER SINCE', 50, 390);
+    ctx.fillText('JOINED SERVER', 420, 390);
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = '24px "Times New Roman"';
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 575);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 500, 575);
+    ctx.font = '16px Arial';
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
     
     return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
@@ -136,8 +107,7 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isButton()) return;
-    if (interaction.customId === 'try_btn') {
+    if (interaction.isButton() && interaction.customId === 'try_btn') {
         const data = designCache.get(interaction.user.id);
         if (!data) return interaction.reply({ content: '❌ لا توجد بيانات.', ephemeral: true });
         await interaction.reply({ content: `الصور الأصلية:\nالبنر: ${data.bannerUrl}\nالأفاتار: ${data.avatarUrl}`, ephemeral: true });
