@@ -1,13 +1,11 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, AttachmentBuilder, ActivityType, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, AttachmentBuilder, ActivityType, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
 
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1518610511183478864/AkY2C6ye3hoq9iVm0OTJ4Ol-NucsVGBxQvjzGEOzxFjzSllBa4_sfU3PfqXQTG3jk3Xy';
 const FONT_NAME = 'MyCustomFont';
 const fontPath = path.join(__dirname, 'font.ttf');
 if (fs.existsSync(fontPath)) GlobalFonts.registerFromPath(fontPath, FONT_NAME);
@@ -81,29 +79,21 @@ client.on(Events.MessageCreate, async (message) => {
         const buffer = await canvas.encode('png');
         const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
 
-        // إرسال عبر الويب هوك
-        await axios.post(WEBHOOK_URL, {
-            embeds: [{
-                color: 0x2A4660,
-                image: { url: 'attachment://profile.png' },
-                footer: { 
-                    text: '7OJO3 Profiles || بروفايلات 7OJO3',
-                    icon_url: 'https://cdn.discordapp.com/attachments/1501304755941675018/1518611094086750409/IMG_6674.png'
-                }
-            }]
-        });
-
-        // إرسال الأزرار في الروم
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678'),
             new ButtonBuilder().setCustomId('send_dm').setLabel('DM').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678')
         );
 
-        await message.channel.send({ components: [row] });
-        await message.reply('✅ تم إرسال تصميمك عبر الويب هوك.');
+        // إرسال الصورة والأزرار معاً في نفس الرسالة (الطريقة الأكثر استقراراً)
+        await message.channel.send({ 
+            files: [attachment], 
+            components: [row] 
+        });
+        
+        await message.reply('✅ تم إنشاء تصميمك بنجاح.');
     } catch (err) {
         console.error(err);
-        message.reply('❌ حدث خطأ.');
+        message.reply('❌ حدث خطأ أثناء معالجة التصميم.');
     } finally {
         isProcessing.delete(message.author.id);
     }
