@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 const FONT_NAME = 'MyCustomFont';
+// تأكد أن ملف الخط الجديد موجود باسم font.ttf في المجلد
 const fontPath = path.join(__dirname, 'font.ttf');
 if (fs.existsSync(fontPath)) GlobalFonts.registerFromPath(fontPath, FONT_NAME);
 
@@ -17,9 +18,8 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates] 
 });
 
-// الرومات المطلوبة
-const PROFILE_CHANNEL_ID = '1501583456872829068'; // روم الصور
-const BUTTON_CHANNEL_ID = '1501583456872829068'; // روم الأزرار
+const PROFILE_CHANNEL_ID = '1501583456872829068'; 
+const BUTTON_CHANNEL_ID = '1501583456872829068'; 
 const ROLE_ID = '1501374221992071348';
 const isProcessing = new Set();
 
@@ -35,37 +35,54 @@ function drawImageCover(ctx, img, x, y, width, height) {
 async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
+    
+    // خلفية البروفايل
     ctx.fillStyle = '#0f0f0f';
     ctx.fillRect(0, 0, 1000, 600);
+
     const banner = await loadImage(bannerUrl);
-    drawImageCover(ctx, banner, 30, 30, 940, 280); 
+    drawImageCover(ctx, banner, 0, 0, 1000, 350); 
+    
+    // دائرة الأفاتار
     ctx.save();
     ctx.beginPath();
-    ctx.arc(150, 370, 85, 0, Math.PI * 2);
+    ctx.arc(140, 350, 90, 0, Math.PI * 2);
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#0f0f0f';
+    ctx.stroke();
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    ctx.drawImage(avatar, 65, 285, 170, 170);
+    ctx.drawImage(avatar, 50, 260, 180, 180);
     ctx.restore();
+
+    // النصوص بالخط الجديد (Serif style)
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 32px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, 260, 380);
+    ctx.font = `bold 40px "${FONT_NAME}"`;
+    ctx.fillText(member.user.username, 260, 370);
+    
     ctx.fillStyle = '#aaaaaa';
-    ctx.font = `18px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 410);
-    ctx.strokeStyle = '#222222';
+    ctx.font = `20px "${FONT_NAME}"`;
+    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 405);
+
+    // الخط الفاصل
+    ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(50, 480);
     ctx.lineTo(950, 480);
     ctx.stroke();
-    ctx.fillStyle = '#666666';
-    ctx.font = `bold 12px "${FONT_NAME}"`;
+
+    // نصوص التاريخ
+    ctx.fillStyle = '#777777';
+    ctx.font = `bold 14px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', 50, 520);
     ctx.fillText('JOINED SERVER', 550, 520);
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = `16px "${FONT_NAME}"`;
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 550);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 550);
+    ctx.font = `20px "${FONT_NAME}"`;
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 555);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 555);
+
     return canvas;
 }
 
@@ -80,11 +97,9 @@ client.on(Events.MessageCreate, async (message) => {
         const buffer = await canvas.encode('png');
         const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
 
-        // إرسال الصورة لروم البروفايلات
         const profileChannel = client.channels.cache.get(PROFILE_CHANNEL_ID);
         if (profileChannel) await profileChannel.send({ files: [attachment] });
 
-        // إرسال الأزرار لروم الأزرار
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678'),
             new ButtonBuilder().setCustomId('send_dm').setLabel('DM').setStyle(ButtonStyle.Secondary).setEmoji('1518609827599880253')
@@ -93,7 +108,6 @@ client.on(Events.MessageCreate, async (message) => {
         const buttonChannel = client.channels.cache.get(BUTTON_CHANNEL_ID);
         if (buttonChannel) await buttonChannel.send({ components: [row] });
         
-        // مسح رسالة المستخدم ليكون العمل صامتاً تماماً
         await message.delete().catch(() => {});
     } catch (err) {
         console.error(err);
