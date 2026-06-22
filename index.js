@@ -68,15 +68,14 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300); 
 
-    // إعدادات ديناميكية لضمان عدم الخروج عن الإطار
-    const count = avatarUrls.length;
-    const AVATAR_SIZE = count > 3 ? 120 : 140; // تصغير الحجم إذا كان العدد 4 أفاتارات
-    const SPACING = 20;
-    const START_X = 60;
-    const Y_POS = 350;
+    // إعدادات التنسيق
+    const AVATAR_SIZE = 140; 
+    const Y_POS = 350; 
+    const SPACING = 20; 
+    const START_X = 60; 
     
-    // 1. رسم جميع الأفاتارات في سطر واحد على اليسار
-    for (let i = 0; i < count; i++) {
+    // 1. رسم جميع الأفاتارات
+    for (let i = 0; i < avatarUrls.length; i++) {
         const x = START_X + (i * (AVATAR_SIZE + SPACING));
         
         ctx.save();
@@ -91,24 +90,23 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
         ctx.restore();
     }
 
-    // 2. حساب موقع النصوص (نبدأ بعد آخر أفاتار مرسوم)
-    const lastAvatarX = START_X + ((count - 1) * (AVATAR_SIZE + SPACING));
-    const textStartX = lastAvatarX + AVATAR_SIZE + 40; 
+    // 2. موقع النصوص الثابت (دائماً بجانب الأفاتار الأول بمسافة ثابتة)
+    const textStartX = START_X + AVATAR_SIZE + 30; 
 
     // رسم الاسم واليوزر
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, textStartX, 410);
+    ctx.fillText(member.user.username, textStartX, 390);
     
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 440);
+    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 420);
 
-    // 3. التواريخ تحت النصوص
+    // 3. التواريخ تحت النصوص في مكان ثابت
     ctx.fillStyle = '#777777';
     ctx.font = `bold 14px "${FONT_NAME}"`;
-    ctx.fillText('MEMBER SINCE', textStartX, 490);
-    ctx.fillText('JOINED SERVER', textStartX + 200, 490);
+    ctx.fillText('MEMBER SINCE', textStartX, 480);
+    ctx.fillText('JOINED SERVER', textStartX + 180, 480);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = `20px "${FONT_NAME}"`;
@@ -116,8 +114,8 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const memberSince = member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
     const joinedServer = member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
     
-    ctx.fillText(memberSince, textStartX, 520);
-    ctx.fillText(joinedServer, textStartX + 200, 520);
+    ctx.fillText(memberSince, textStartX, 510);
+    ctx.fillText(joinedServer, textStartX + 180, 510);
 
     return canvas;
 }
