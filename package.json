@@ -4,6 +4,7 @@
   "main": "index.js",
   "dependencies": {
     "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.16.1",
     "@napi-rs/canvas": "^0.1.46",
     "dotenv": "^16.4.5",
     "express": "^4.19.2"
