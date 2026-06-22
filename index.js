@@ -58,8 +58,8 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
-// دالة موحدة لرسم البطاقة تحتوي على كل العناصر (الأفاتار، الاسم، التواريخ)
-async function drawFullCard(bannerUrl, avatarUrls, member) {
+// هذه الدالة الموحدة ستستخدم لجميع الأوامر لضمان نفس الشكل
+async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
 
@@ -89,13 +89,13 @@ async function drawFullCard(bannerUrl, avatarUrls, member) {
         ctx.restore();
     }
 
-    // رسم الأفاتارات
+    // رسم الأفاتارات بناءً على عددها
     for (let i = 0; i < avatarUrls.length; i++) {
-        let xPos = START_X + (i * (AVATAR_SIZE + 5));
+        let xPos = START_X + (i * (AVATAR_SIZE + 10));
         await drawAvatar(avatarUrls[i], xPos, Y_AVATARS, AVATAR_SIZE);
     }
 
-    const textStartX = START_X + (avatarUrls.length * (AVATAR_SIZE + 5)) + 15; 
+    const textStartX = START_X + (avatarUrls.length * (AVATAR_SIZE + 10)) + 15; 
     
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
@@ -144,8 +144,8 @@ client.on(Events.MessageCreate, async (message) => {
         const avatarUrls = [];
         for(let i = 1; i <= count; i++) avatarUrls.push(message.attachments.at(i).url);
 
-        // استخدام الدالة الموحدة لجميع الأوامر
-        const canvas = await drawFullCard(bannerUrl, avatarUrls, message.member);
+        // استخدام الدالة الموحدة لكل الأوامر
+        const canvas = await createUnifiedCard(bannerUrl, avatarUrls, message.member);
             
         const attachment = new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 
@@ -173,7 +173,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
     
     const data = designCache.get(interaction.message.id);
-    if (!data) return interaction.reply({ content: '❌ حدث خطأ، يرجى إعادة طلب التصميم.', ephemeral: true });
+    if (!data) return interaction.reply({ content: '❌ حدث خطأ: لا يمكن العثور على الصور في الذاكرة (ربما تمت إعادة تشغيل البوت). يرجى طلب التصميم مجدداً.', ephemeral: true });
 
     if (interaction.customId === 'try_design') {
         await interaction.reply({ 
