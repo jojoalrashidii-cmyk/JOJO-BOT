@@ -58,8 +58,8 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
-// هذه الدالة الموحدة ستستخدم لجميع الأوامر
-async function createUnifiedCard(bannerUrl, avatarUrls, member, isMatching) {
+// هذه الدالة الموحدة ستستخدم لجميع الأوامر لضمان نفس الشكل
+async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
 
@@ -89,10 +89,10 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member, isMatching) {
         ctx.restore();
     }
 
-    // 1. رسم الأفاتار الأول فقط
+    // 1. رسم الأفاتار الأول (الرئيسي)
     await drawAvatar(avatarUrls[0], START_X, Y_AVATARS, AVATAR_SIZE);
 
-    // 2. رسم النص
+    // 2. رسم النص (الاسم واليوزر) بجانب الأفاتار الأول
     const textStartX = START_X + AVATAR_SIZE + 20;
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
@@ -102,11 +102,15 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member, isMatching) {
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 410);
 
-    // 3. رسم بقية الأفاتارات - منطق شرطي للماتشينق
-    let currentX = isMatching ? (textStartX + 50) : (textStartX + 200); 
-    const spacing = isMatching ? 5 : 15;
+    // 3. رسم بقية الأفاتارات: تم ضبط الإحداثيات والمسافات لضمان التنسيق الصحيح
+    // نبدأ من بعد النص مباشرة مع إضافة هامش بسيط
+    let currentX = textStartX + 100; 
+    const spacing = 20; // المسافة بين الأفاتارات الإضافية
 
     for (let i = 1; i < avatarUrls.length; i++) {
+        // إذا كان الأفاتار سيتجاوز حدود الـ 950، نتوقف أو نعدل الموقع (هنا التنسيق متوافق مع 4 أفاتارات)
+        if (currentX + AVATAR_SIZE > 980) break;
+        
         await drawAvatar(avatarUrls[i], currentX, Y_AVATARS, AVATAR_SIZE);
         currentX += (AVATAR_SIZE + spacing);
     }
@@ -133,12 +137,11 @@ client.on(Events.MessageCreate, async (message) => {
     let command = message.content.split(' ')[0];
     let count = 0;
     let targetRoom = null;
-    let isMatching = false;
 
     if (command === '!design') { count = 1; targetRoom = DESIGN_CHANNEL_ID; }
-    else if (command === '!Matching2') { count = 2; targetRoom = MATCHING_CHANNEL_ID; isMatching = true; }
-    else if (command === '!Matching3') { count = 3; targetRoom = MATCHING_CHANNEL_ID; isMatching = true; }
-    else if (command === '!Matching4') { count = 4; targetRoom = MATCHING_CHANNEL_ID; isMatching = true; }
+    else if (command === '!Matching2') { count = 2; targetRoom = MATCHING_CHANNEL_ID; }
+    else if (command === '!Matching3') { count = 3; targetRoom = MATCHING_CHANNEL_ID; }
+    else if (command === '!Matching4') { count = 4; targetRoom = MATCHING_CHANNEL_ID; }
     else return;
 
     if (message.attachments.size < (count + 1)) return;
@@ -151,7 +154,7 @@ client.on(Events.MessageCreate, async (message) => {
         const avatarUrls = [];
         for(let i = 1; i <= count; i++) avatarUrls.push(message.attachments.at(i).url);
 
-        const canvas = await createUnifiedCard(bannerUrl, avatarUrls, message.member, isMatching);
+        const canvas = await createUnifiedCard(bannerUrl, avatarUrls, message.member);
             
         const attachment = new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 
