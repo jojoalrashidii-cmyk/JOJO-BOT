@@ -5,15 +5,19 @@ const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 
-// --- إعداد الفونت ---
+// --- إعدادات ثابتة ---
+const WEBHOOK_URL = 'https://discord.com/api/webhooks/1518610511183478864/AkY2C6ye3hoq9iVm0OTJ4Ol-NucsVGBxQvjzGEOzxFjzSllBa4_sfU3PfqXQTG3jk3Xy';
+const TARGET_CHANNEL_ID = '1501583456872829068';
+const VOICE_CHANNEL_ID = '1518127536834613360';
+const ROLE_ID = '1501374221992071348';
+const FONT_NAME = 'MyCustomFont';
+
 const fontPath = path.join(__dirname, 'font.ttf');
 if (fs.existsSync(fontPath)) {
-    GlobalFonts.registerFromPath(fontPath, 'MyCustomFont');
-} else {
-    console.error('⚠️ تحذير: ملف font.ttf غير موجود في المجلد!');
+    GlobalFonts.registerFromPath(fontPath, FONT_NAME);
 }
-const FONT_NAME = 'MyCustomFont';
 
 const app = express();
 app.listen(process.env.PORT || 3000);
@@ -22,9 +26,6 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates] 
 });
 
-const TARGET_CHANNEL_ID = '1501583456872829068';
-const VOICE_CHANNEL_ID = '1518127536834613360';
-const ROLE_ID = '1501374221992071348';
 const isProcessing = new Set();
 
 function drawImageCover(ctx, img, x, y, width, height) {
@@ -94,24 +95,43 @@ client.on(Events.MessageCreate, async (message) => {
     if (message.attachments.size < 2) return message.reply('⚠️ يرجى إرفاق صورتين.');
 
     isProcessing.add(message.author.id);
-    const targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
-    
     try {
         const canvas = await createProfileCard(message.attachments.first().url, message.attachments.at(1).url, message.member);
         const buffer = await canvas.encode('png');
-        const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
-
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('send_dm').setLabel('Send to DM').setStyle(ButtonStyle.Primary)
-            );
-
-        await targetChannel.send({ 
-            files: [attachment],
-            components: [row]
+        
+        // إرسال عبر Webhook
+        await axios.post(WEBHOOK_URL, {
+            embeds: [{
+                color: 0x2A4660,
+                image: { url: 'attachment://profile.png' },
+                footer: { 
+                    text: '7OJO3 Profiles || بروفايلات 7OJO3',
+                    icon_url: 'https://cdn.discordapp.com/attachments/1501304755941675018/1518611094086750409/IMG_6674.png'
+                }
+            }],
+            attachments: [{ id: 0, filename: 'profile.png' }]
+        }, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            data: {
+                payload_json: JSON.stringify({
+                    embeds: [{
+                        color: 0x2A4660,
+                        image: { url: 'attachment://profile.png' },
+                        footer: { text: '7OJO3 Profiles || بروفايلات 7OJO3', icon_url: 'https://cdn.discordapp.com/attachments/1501304755941675018/1518611094086750409/IMG_6674.png' }
+                    }]
+                }),
+                'file[0]': buffer
+            }
         });
-        await message.reply('✅ تم إرسال تصميمك.');
+
+        // إرسال الأزرار
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678'),
+            new ButtonBuilder().setCustomId('send_dm').setLabel('DM').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678')
+        );
+
+        await message.channel.send({ components: [row] });
+        await message.reply('✅ تم إرسال تصميمك عبر الويب هوك.');
     } catch (err) {
         console.error(err);
         message.reply('❌ حدث خطأ أثناء المعالجة.');
@@ -122,24 +142,16 @@ client.on(Events.MessageCreate, async (message) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
-
     if (interaction.customId === 'try_design') {
         await interaction.reply({ content: '🎨 أرسل الصورتين (البانر والأفاتار) مجدداً للتجربة!', ephemeral: true });
     } else if (interaction.customId === 'send_dm') {
         try {
-            const canvas = await createProfileCard(interaction.message.attachments.first().url, interaction.message.attachments.first().url, interaction.member);
+            const canvas = await createProfileCard(interaction.message.attachments.first()?.url || 'https://via.placeholder.com/150', 'https://via.placeholder.com/150', interaction.member);
             const buffer = await canvas.encode('png');
-            
-            await interaction.user.send({ 
-                content: '📸 إليك تصميمك الذي طلبته:', 
-                files: [new AttachmentBuilder(buffer, { name: 'profile.png' })] 
-            });
-            await interaction.reply({ content: '✅ تم إرسال التصميم لخاصك!', ephemeral: true });
+            await interaction.user.send({ content: '📸 إليك تصميمك:', files: [new AttachmentBuilder(buffer, { name: 'profile.png' })] });
+            await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
         } catch (err) {
-            await interaction.reply({ 
-                content: 'تسوقمها؟ خاصك مقفل كيف تبيني ارسلك الافتارات؟ افتح الخاص يا وحش!', 
-                ephemeral: true 
-            });
+            await interaction.reply({ content: 'تسوقمها؟ خاصك مقفل كيف تبيني ارسلك الافتارات؟ افتح الخاص يا وحش!', ephemeral: true });
         }
     }
 });
