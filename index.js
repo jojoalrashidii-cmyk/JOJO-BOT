@@ -26,6 +26,8 @@ const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
 const isProcessing = new Set();
+// مخزن مؤقت للصور الأصلية
+const designCache = new Map();
 
 // --- اتصال البوت والستريم ---
 client.once(Events.ClientReady, async (c) => {
@@ -54,20 +56,16 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
-// --- الإحداثيات المحدثة حسب طلبك ---
 async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
 
-    // 1. الخلفية (الأسود الكامل)
     ctx.fillStyle = '#0f0f0f';
     ctx.fillRect(0, 0, 1000, 600);
 
-    // 2. البانر (بدون تمدد قبيح)
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300); 
     
-    // 3. دائرة الأفاتار (موقع دقيق)
     ctx.save();
     ctx.beginPath();
     ctx.arc(140, 350, 90, 0, Math.PI * 2);
@@ -81,7 +79,6 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.drawImage(avatar, 50, 260, 180, 180);
     ctx.restore();
 
-    // 4. النصوص (موقع دقيق بجانب الأفاتار)
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 35px "${FONT_NAME}"`;
     ctx.fillText(member.user.username, 260, 360);
@@ -90,7 +87,6 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.font = `18px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), 260, 395);
 
-    // 5. الخط الفاصل
     ctx.strokeStyle = '#222222';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -98,7 +94,6 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.lineTo(950, 480);
     ctx.stroke();
 
-    // 6. التواريخ
     ctx.fillStyle = '#777777';
     ctx.font = `bold 12px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', 50, 520);
@@ -121,7 +116,10 @@ client.on(Events.MessageCreate, async (message) => {
     const targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
     
     try {
-        const canvas = await createProfileCard(message.attachments.first().url, message.attachments.at(1).url, message.member);
+        const bannerUrl = message.attachments.first().url;
+        const avatarUrl = message.attachments.at(1).url;
+
+        const canvas = await createProfileCard(bannerUrl, avatarUrl, message.member);
         const buffer = await canvas.encode('png');
         const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
 
@@ -131,10 +129,12 @@ client.on(Events.MessageCreate, async (message) => {
         );
 
         if (targetChannel) {
-            await targetChannel.send({ 
+            const sentMessage = await targetChannel.send({ 
                 files: [attachment],
                 components: [row]
             });
+            // حفظ الصور للرسالة المرسلة
+            designCache.set(sentMessage.id, { banner: bannerUrl, avatar: avatarUrl });
         }
         await message.delete().catch(() => {});
     } catch (err) {
@@ -146,20 +146,24 @@ client.on(Events.MessageCreate, async (message) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
+    
+    const data = designCache.get(interaction.message.id);
+    
     if (interaction.customId === 'try_design') {
-        await interaction.reply({ content: '🎨 أرسل الصورتين هنا للتجربة!', ephemeral: true });
+        if (!data) return interaction.reply({ content: '❌ حدث خطأ في البيانات!', ephemeral: true });
+        await interaction.reply({ content: `🎨 إليك الصور الأصلية:\nالبانر: ${data.banner}\nالأفاتار: ${data.avatar}`, ephemeral: true });
     } else if (interaction.customId === 'send_dm') {
         try {
-            // استخدام نفس الصور المرفقة في الرسالة الأصلية
-            const canvas = await createProfileCard(interaction.message.attachments.first().url, interaction.message.attachments.first().url, interaction.member);
-            const buffer = await canvas.encode('png');
+            if (!data) return interaction.reply({ content: '❌ حدث خطأ في البيانات!', ephemeral: true });
+            
+            // إرسال الصور الأصلية للخاص
             await interaction.user.send({ 
-                content: '📸 إليك تصميمك:', 
-                files: [new AttachmentBuilder(buffer, { name: 'profile.png' })] 
+                content: '📸 إليك الصور الأصلية التي استخدمتها في التصميم:', 
+                files: [data.banner, data.avatar] 
             });
-            await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
+            await interaction.reply({ content: '✅ تم إرسال الصور الأصلية للخاص!', ephemeral: true });
         } catch (err) {
-            await interaction.reply({ content: '❌ تسوقمها؟كيف برسلك وانت مسكر الخاص!', ephemeral: true });
+            await interaction.reply({ content: '❌ افتح الخاص يا وحش!', ephemeral: true });
         }
     }
 });
