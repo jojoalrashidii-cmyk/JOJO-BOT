@@ -69,7 +69,7 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300); 
 
-    const AVATAR_SIZE = 180; // حجم مناسب
+    const AVATAR_SIZE = 180; 
     const Y_AVATARS = 330; 
     const START_X = 60;
     
@@ -90,7 +90,6 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
 
     await drawAvatar(avatarUrls[0], START_X, Y_AVATARS, AVATAR_SIZE);
 
-    // --- تقليص المسافة بين النص والأفاتار ---
     const textStartX = START_X + AVATAR_SIZE + 15; 
     
     ctx.fillStyle = '#ffffff';
@@ -101,7 +100,6 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 410);
 
-    // --- تقليص المسافة بين الأفاتارات لضمان عدم الخروج من الإطار ---
     let currentX = textStartX + 150; 
     const SPACING = 5; 
     for (let i = 1; i < avatarUrls.length; i++) {
@@ -128,7 +126,8 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
 async function createDesignCard(bannerUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#000000'; // خلفية سوداء
+    // --- تم تعديل خلفية الـ design card لتصبح سوداء ---
+    ctx.fillStyle = '#000000'; 
     ctx.fillRect(0, 0, 1000, 600);
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300);
