@@ -1,11 +1,10 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, AttachmentBuilder, ActivityType, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, AttachmentBuilder, ActivityType, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, WebhookClient } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
 
 // --- إعدادات ثابتة ---
 const WEBHOOK_URL = 'https://discord.com/api/webhooks/1518610511183478864/AkY2C6ye3hoq9iVm0OTJ4Ol-NucsVGBxQvjzGEOzxFjzSllBa4_sfU3PfqXQTG3jk3Xy';
@@ -27,6 +26,7 @@ const client = new Client({
 });
 
 const isProcessing = new Set();
+const webhookClient = new WebhookClient({ url: WEBHOOK_URL });
 
 function drawImageCover(ctx, img, x, y, width, height) {
     const ratio = Math.max(width / img.width, height / img.height);
@@ -98,9 +98,11 @@ client.on(Events.MessageCreate, async (message) => {
     try {
         const canvas = await createProfileCard(message.attachments.first().url, message.attachments.at(1).url, message.member);
         const buffer = await canvas.encode('png');
+        const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
         
-        // إرسال عبر Webhook
-        await axios.post(WEBHOOK_URL, {
+        // إرسال عبر WebhookClient (أكثر استقراراً)
+        await webhookClient.send({
+            files: [attachment],
             embeds: [{
                 color: 0x2A4660,
                 image: { url: 'attachment://profile.png' },
@@ -108,20 +110,7 @@ client.on(Events.MessageCreate, async (message) => {
                     text: '7OJO3 Profiles || بروفايلات 7OJO3',
                     icon_url: 'https://cdn.discordapp.com/attachments/1501304755941675018/1518611094086750409/IMG_6674.png'
                 }
-            }],
-            attachments: [{ id: 0, filename: 'profile.png' }]
-        }, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            data: {
-                payload_json: JSON.stringify({
-                    embeds: [{
-                        color: 0x2A4660,
-                        image: { url: 'attachment://profile.png' },
-                        footer: { text: '7OJO3 Profiles || بروفايلات 7OJO3', icon_url: 'https://cdn.discordapp.com/attachments/1501304755941675018/1518611094086750409/IMG_6674.png' }
-                    }]
-                }),
-                'file[0]': buffer
-            }
+            }]
         });
 
         // إرسال الأزرار
