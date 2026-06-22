@@ -1,142 +1,150 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, AttachmentBuilder, ActivityType, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType, Events, PermissionsBitField, ComponentType } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
-const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
-
-// --- إعداد الفونت ---
-const fontPath = path.join(__dirname, 'font.ttf');
-if (fs.existsSync(fontPath)) {
-    GlobalFonts.registerFromPath(fontPath, 'MyCustomFont');
-}
-const FONT_NAME = 'MyCustomFont';
 
 const app = express();
+app.get('/', (req, res) => res.send('Bot is running!'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates] 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent, 
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates
+    ] 
 });
 
-const PROFILE_CHANNEL_ID = '1501583456872829068'; 
-const BUTTON_CHANNEL_ID = '1501583456872829068'; 
-const VOICE_CHANNEL_ID = '1518127536834613360'; // تأكد من الـ ID هنا
+const TARGET_CHANNEL_ID = '1501583456872829068';
+const VOICE_CHANNEL_ID = '1518127536834613360';
+const EMOJI_ID = '1513336672870469793';
 const ROLE_ID = '1501374221992071348';
-const isProcessing = new Set();
+const MY_USER_ID = '890586243346354216'; 
+const designCache = new Map();
 
-// --- تفعيل الستريم والدخول للروم عند التشغيل ---
-client.once(Events.ClientReady, async (c) => {
-    console.log(`✅ البوت متصل: ${c.user.tag}`);
-    
-    // ضبط حالة الستريم
-    client.user.setPresence({ 
-        activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }], 
-        status: 'online' 
+client.once('ready', async () => {
+    client.user.setPresence({
+        activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }],
+        status: 'online'
     });
+    
+    console.log('✅ البوت متصل، جاري تأمين الروم...');
+    
+    const guild = client.guilds.cache.first();
+    if (guild) {
+        try {
+            const myUser = await guild.members.fetch(MY_USER_ID).catch(() => null);
+            const vc = guild.channels.cache.get(VOICE_CHANNEL_ID);
+            
+            if (vc) {
+                await vc.permissionOverwrites.set([
+                    { id: guild.id, deny: [PermissionsBitField.Flags.Connect], allow: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: client.user.id, allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.ViewChannel] },
+                    ...(myUser ? [{ id: myUser.id, allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.ViewChannel] }] : [])
+                ]);
 
-    // الاتصال بالروم الصوتي
-    const vc = client.channels.cache.get(VOICE_CHANNEL_ID);
-    if (vc) {
-        joinVoiceChannel({
-            channelId: vc.id,
-            guildId: vc.guild.id,
-            adapterCreator: vc.guild.voiceAdapterCreator,
-        });
-        console.log('✅ تم الدخول للروم الصوتي!');
+                joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator });
+                console.log('🔒 تم تأمين الروم ودخول البوت.');
+            }
+        } catch (err) { console.error("❌ خطأ أثناء تأمين الروم: ", err); }
     }
 });
 
-function drawImageCover(ctx, img, x, y, width, height) {
-    const ratio = Math.max(width / img.width, height / img.height);
-    const sWidth = width / ratio;
-    const sHeight = height / ratio;
-    const sx = (img.width - sWidth) / 2;
-    const sy = (img.height - sHeight) / 2;
-    ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
+async function drawImageCover(ctx, img, x, y, w, h) {
+    const imgRatio = img.width / img.height;
+    const targetRatio = w / h;
+    let sWidth, sHeight, sx, sy;
+    if (imgRatio > targetRatio) {
+        sWidth = img.height * targetRatio;
+        sHeight = img.height;
+        sx = (img.width - sWidth) / 2;
+        sy = 0;
+    } else {
+        sWidth = img.width;
+        sHeight = img.width / targetRatio;
+        sx = 0;
+        sy = (img.height - sHeight) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
 }
 
 async function createProfileCard(bannerUrl, avatarUrl, member) {
-    const canvas = createCanvas(1000, 600);
+    const canvas = createCanvas(800, 450);
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#0f0f0f';
-    ctx.fillRect(0, 0, 1000, 600);
+    
+    ctx.fillStyle = '#0a0a0a'; // خلفية سوداء داكنة
+    ctx.fillRect(0, 0, 800, 450);
+    
     const banner = await loadImage(bannerUrl);
-    drawImageCover(ctx, banner, 30, 30, 940, 280); 
+    await drawImageCover(ctx, banner, 0, 0, 800, 250);
+    
     ctx.save();
     ctx.beginPath();
-    ctx.arc(150, 370, 85, 0, Math.PI * 2);
+    ctx.arc(130, 250, 75, 0, Math.PI * 2);
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    ctx.drawImage(avatar, 65, 285, 170, 170);
+    await drawImageCover(ctx, avatar, 55, 175, 150, 150);
     ctx.restore();
+    
+    // الاسم
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 32px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, 260, 380);
-    ctx.fillStyle = '#aaaaaa';
-    ctx.font = `18px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 410);
-    ctx.strokeStyle = '#222222';
+    ctx.font = 'bold 30px "Times New Roman"';
+    ctx.fillText(member.user.username, 230, 275);
+    
+    // المعرف
+    ctx.fillStyle = '#888888';
+    ctx.font = '18px sans-serif';
+    ctx.fillText('@' + member.user.username.toLowerCase(), 230, 305);
+    
+    // الخط الفاصل
+    ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(50, 480);
-    ctx.lineTo(950, 480);
+    ctx.moveTo(50, 360);
+    ctx.lineTo(750, 360);
     ctx.stroke();
-    ctx.fillStyle = '#666666';
-    ctx.font = `bold 12px "${FONT_NAME}"`;
-    ctx.fillText('MEMBER SINCE', 50, 520);
-    ctx.fillText('JOINED SERVER', 550, 520);
+    
+    // التواريخ
+    ctx.fillStyle = '#777777';
+    ctx.font = 'bold 14px "Times New Roman"';
+    ctx.fillText('MEMBER SINCE', 50, 390);
+    ctx.fillText('JOINED SERVER', 420, 390);
+    
     ctx.fillStyle = '#ffffff';
-    ctx.font = `16px "${FONT_NAME}"`;
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 550);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 550);
-    return canvas;
+    ctx.font = '16px "Times New Roman"';
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
+    
+    return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
 
 client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot || !message.content.startsWith('!design') || isProcessing.has(message.author.id)) return;
+    if (message.author.bot || !message.content.startsWith('!design')) return;
     if (!message.member.roles.cache.has(ROLE_ID)) return;
     if (message.attachments.size < 2) return;
+    
+    const att = Array.from(message.attachments.values());
+    const data = { bannerUrl: att[0].url, avatarUrl: att[1].url };
+    designCache.set(message.author.id, data);
+    
+    const card = await createProfileCard(data.bannerUrl, data.avatarUrl, message.member);
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('try_btn').setLabel('Try').setEmoji(EMOJI_ID).setStyle(ButtonStyle.Secondary)
+    );
 
-    isProcessing.add(message.author.id);
-    try {
-        const canvas = await createProfileCard(message.attachments.first().url, message.attachments.at(1).url, message.member);
-        const buffer = await canvas.encode('png');
-        const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
-
-        const profileChannel = client.channels.cache.get(PROFILE_CHANNEL_ID);
-        if (profileChannel) await profileChannel.send({ files: [attachment] });
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678'),
-            new ButtonBuilder().setCustomId('send_dm').setLabel('DM').setStyle(ButtonStyle.Secondary).setEmoji('1518609827599880253')
-        );
-
-        const buttonChannel = client.channels.cache.get(BUTTON_CHANNEL_ID);
-        if (buttonChannel) await buttonChannel.send({ components: [row] });
-        
-        await message.delete().catch(() => {});
-    } catch (err) {
-        console.error(err);
-    } finally {
-        isProcessing.delete(message.author.id);
-    }
+    const channel = client.channels.cache.get(TARGET_CHANNEL_ID);
+    await channel.send({ files: [card], components: [row] });
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
-    if (interaction.customId === 'try_design') {
-        await interaction.reply({ content: '🎨 أرسل الصورتين مجدداً هنا للتجربة!', ephemeral: true });
-    } else if (interaction.customId === 'send_dm') {
-        try {
-            const canvas = await createProfileCard(interaction.message.attachments.first()?.url || 'https://via.placeholder.com/150', 'https://via.placeholder.com/150', interaction.member);
-            const buffer = await canvas.encode('png');
-            await interaction.user.send({ files: [new AttachmentBuilder(buffer, { name: 'profile.png' })] });
-            await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
-        } catch (err) {
-            await interaction.reply({ content: '❌ افتح الخاص يا وحش!', ephemeral: true });
-        }
+    if (interaction.customId === 'try_btn') {
+        const data = designCache.get(interaction.user.id);
+        if (!data) return interaction.reply({ content: '❌ لا توجد بيانات.', ephemeral: true });
+        await interaction.reply({ content: `الصور الأصلية:\nالبنر: ${data.bannerUrl}\nالأفاتار: ${data.avatarUrl}`, ephemeral: true });
     }
 });
 
