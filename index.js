@@ -8,10 +8,13 @@ const fs = require('fs');
 
 // --- إعدادات ثابتة ---
 const WEBHOOK_URL = 'https://discord.com/api/webhooks/1518610511183478864/AkY2C6ye3hoq9iVm0OTJ4Ol-NucsVGBxQvjzGEOzxFjzSllBa4_sfU3PfqXQTG3jk3Xy';
-const TARGET_CHANNEL_ID = '1501583456872829068';
+const TARGET_CHANNEL_ID = '1501583456872829068'; 
+const BUTTON_CHANNEL_ID = '1501583456872829068'; 
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
 const FONT_NAME = 'MyCustomFont';
+// رابط الفوتر الجديد
+const FOOTER_IMG_URL = 'https://cdn.discordapp.com/attachments/1035223472898584727/1518614099376869376/IMG_6674.png';
 
 const fontPath = path.join(__dirname, 'font.ttf');
 if (fs.existsSync(fontPath)) {
@@ -100,7 +103,6 @@ client.on(Events.MessageCreate, async (message) => {
         const buffer = await canvas.encode('png');
         const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
         
-        // إرسال عبر WebhookClient (أكثر استقراراً)
         await webhookClient.send({
             files: [attachment],
             embeds: [{
@@ -108,19 +110,25 @@ client.on(Events.MessageCreate, async (message) => {
                 image: { url: 'attachment://profile.png' },
                 footer: { 
                     text: '7OJO3 Profiles || بروفايلات 7OJO3',
-                    icon_url: 'https://cdn.discordapp.com/attachments/1501304755941675018/1518611094086750409/IMG_6674.png'
+                    icon_url: FOOTER_IMG_URL // استخدام الرابط الجديد هنا
                 }
             }]
         });
 
-        // إرسال الأزرار
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678'),
             new ButtonBuilder().setCustomId('send_dm').setLabel('DM').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678')
         );
 
-        await message.channel.send({ components: [row] });
-        await message.reply('✅ تم إرسال تصميمك عبر الويب هوك.');
+        const buttonChannel = client.channels.cache.get(BUTTON_CHANNEL_ID);
+        if (buttonChannel) {
+            await buttonChannel.send({ 
+                content: `🎨 الأزرار الخاصة بتصميم: ${message.author}`,
+                components: [row] 
+            });
+        }
+
+        await message.reply('✅ تم إرسال التصميم والأزرار بنجاح.');
     } catch (err) {
         console.error(err);
         message.reply('❌ حدث خطأ أثناء المعالجة.');
