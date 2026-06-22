@@ -54,24 +54,34 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
+// --- تم تحديث الإحداثيات هنا لتطابق صورتك تماماً ---
 async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
 
+    // 1. الخلفية
     ctx.fillStyle = '#0f0f0f';
     ctx.fillRect(0, 0, 1000, 600);
 
+    // 2. البانر
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 0, 0, 1000, 350); 
 
+    // 3. دائرة الأفاتار (تداخل مع البانر)
     ctx.save();
     ctx.beginPath();
     ctx.arc(140, 350, 90, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f0f0f'; // لون الحافة لدمجها مع الخلفية
+    ctx.fill();
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#0f0f0f';
+    ctx.stroke();
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
     ctx.drawImage(avatar, 50, 260, 180, 180);
     ctx.restore();
 
+    // 4. النصوص
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
     ctx.fillText(member.user.username, 260, 370);
@@ -80,6 +90,7 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), 260, 405);
 
+    // 5. الخط الفاصل
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -87,6 +98,7 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.lineTo(950, 480);
     ctx.stroke();
 
+    // 6. نصوص التواريخ
     ctx.fillStyle = '#777777';
     ctx.font = `bold 14px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', 50, 520);
@@ -134,7 +146,6 @@ client.on(Events.MessageCreate, async (message) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
-
     if (interaction.customId === 'try_design') {
         await interaction.reply({ content: '🎨 أرسل الصورتين هنا للتجربة!', ephemeral: true });
     } else if (interaction.customId === 'send_dm') {
