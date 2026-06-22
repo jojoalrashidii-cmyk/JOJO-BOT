@@ -152,7 +152,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.customId === 'try_design') {
         // إرسال الصور الأصلية كملفات للتجربة
         await interaction.reply({ 
-            content: '🎨 إليك الصور الأصلية للتجربة:', 
+            content: 'خذ خذ وتوكل:', 
             files: [data.banner, data.avatar], 
             ephemeral: true 
         });
