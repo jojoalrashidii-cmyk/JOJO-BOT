@@ -6,7 +6,6 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
-// إعداد الخط
 const fontPath = path.join(__dirname, 'font.ttf');
 if (fs.existsSync(fontPath)) GlobalFonts.registerFromPath(fontPath, 'MyCustomFont');
 
@@ -21,66 +20,73 @@ const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
 
-// --- دالة الرسم بإحداثياتك ---
+// دالة قص البانر (مع ترك هوامش كما في صورتك)
+function drawImageCover(ctx, img, x, y, width, height) {
+    const ratio = Math.max(width / img.width, height / img.height);
+    const sWidth = width / ratio;
+    const sHeight = height / ratio;
+    const sx = (img.width - sWidth) / 2;
+    const sy = (img.height - sHeight) / 2;
+    ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
+}
+
 async function createProfileCard(bannerUrl, avatarUrl, member) {
-    const width = 900;
-    const height = 500;
-    const canvas = createCanvas(width, height);
+    // أبعاد الكانفاس لتعطي نفس نسبة الطول والعرض الموجودة في صورتك
+    const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
     const font = fs.existsSync(fontPath) ? '"MyCustomFont"' : 'Arial';
 
     ctx.fillStyle = '#0f0f0f';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, 1000, 600);
 
+    // البانر: مقصوص من الحواف ومترك مساحة في الأعلى
     const banner = await loadImage(bannerUrl);
-    ctx.drawImage(banner, 0, 0, width, 250);
+    drawImageCover(ctx, banner, 30, 30, 940, 280); 
 
+    // الأفاتار: بنفس الحجم والموقع
     ctx.save();
     ctx.beginPath();
-    ctx.arc(150, 350, 80, 0, Math.PI * 2);
+    ctx.arc(150, 370, 85, 0, Math.PI * 2);
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    ctx.drawImage(avatar, 70, 270, 160, 160);
+    ctx.drawImage(avatar, 65, 285, 170, 170);
     ctx.restore();
 
+    // النصوص (أحجام صغيرة ودقيقة)
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 30px ${font}`;
-    ctx.fillText(member.user.username, 260, 320);
+    ctx.font = `bold 32px ${font}`;
+    ctx.fillText(member.user.username, 260, 380);
     
-    ctx.font = `16px ${font}`;
-    ctx.fillStyle = '#b9bbbe';
-    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 350);
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = `18px ${font}`;
+    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 410);
 
-    ctx.strokeStyle = '#2f3136';
-    ctx.lineWidth = 2;
+    // الخط الفاصل
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(50, 420);
-    ctx.lineTo(850, 420);
+    ctx.moveTo(50, 480);
+    ctx.lineTo(950, 480);
     ctx.stroke();
 
-    ctx.fillStyle = '#b9bbbe';
-    ctx.font = `12px ${font}`;
-    ctx.fillText('MEMBER SINCE', 60, 450);
-    ctx.fillText('JOINED SERVER', 500, 450);
+    // التواريخ
+    ctx.fillStyle = '#666666';
+    ctx.font = `bold 12px ${font}`;
+    ctx.fillText('MEMBER SINCE', 50, 520);
+    ctx.fillText('JOINED SERVER', 550, 520);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 18px ${font}`;
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 60, 475);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 500, 475);
+    ctx.font = `16px ${font}`;
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 550);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 550);
 
     return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
 
-// --- أحداث البوت ---
 client.once('ready', async () => {
     client.user.setPresence({ activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }], status: 'online' });
-
-    const guild = client.guilds.cache.first();
-    const vc = guild.channels.cache.get(VOICE_CHANNEL_ID);
-    if (vc) {
-        await vc.permissionOverwrites.set([{ id: guild.id, deny: [PermissionsBitField.Flags.Connect], allow: [PermissionsBitField.Flags.ViewChannel] }, { id: client.user.id, allow: [PermissionsBitField.Flags.Connect] }]);
-        joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator });
-    }
+    const vc = client.channels.cache.get(VOICE_CHANNEL_ID);
+    if (vc) joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator });
 });
 
 client.on(Events.MessageCreate, async (message) => {
@@ -92,9 +98,10 @@ client.on(Events.MessageCreate, async (message) => {
     try {
         const card = await createProfileCard(message.attachments.first().url, message.attachments.at(1).url, message.member);
         await targetChannel.send({ files: [card] });
-        await message.reply('✅ تم إرسال التصميم.');
+        // إيقاف التنفيذ لضمان عدم التكرار
     } catch (err) {
-        message.reply('❌ حدث خطأ.');
+        console.error(err);
+        message.reply('❌ خطأ في التصميم.');
     }
 });
 
