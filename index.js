@@ -73,7 +73,6 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     const AVATAR_SIZE = 180;
     const Y_AVATARS = 330; 
     const START_X = 60;
-    const SPACING = 15;
     
     async function drawAvatar(url, x, y, size) {
         ctx.save();
@@ -103,11 +102,13 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 410);
 
-    // 3. رسم بقية الأفاتارات بعد النص
-    let currentX = textStartX + 200; 
+    // 3. رسم بقية الأفاتارات بعد النص مع تقليل المسافات لضمان عدم الخروج من الإطار
+    let currentX = textStartX + 180; 
+    const spacing = 5; // مسافة صغيرة جداً لتقليص المساحة
+
     for (let i = 1; i < avatarUrls.length; i++) {
         await drawAvatar(avatarUrls[i], currentX, Y_AVATARS, AVATAR_SIZE);
-        currentX += (AVATAR_SIZE + SPACING);
+        currentX += (AVATAR_SIZE + spacing);
     }
 
     ctx.fillStyle = '#777777';
