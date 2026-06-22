@@ -58,7 +58,8 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
-async function createMatchingCard(bannerUrl, avatarUrls, member) {
+// دالة موحدة لرسم البطاقة تحتوي على كل العناصر (الأفاتار، الاسم، التواريخ)
+async function drawFullCard(bannerUrl, avatarUrls, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
 
@@ -88,9 +89,13 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
         ctx.restore();
     }
 
-    await drawAvatar(avatarUrls[0], START_X, Y_AVATARS, AVATAR_SIZE);
+    // رسم الأفاتارات
+    for (let i = 0; i < avatarUrls.length; i++) {
+        let xPos = START_X + (i * (AVATAR_SIZE + 5));
+        await drawAvatar(avatarUrls[i], xPos, Y_AVATARS, AVATAR_SIZE);
+    }
 
-    const textStartX = START_X + AVATAR_SIZE + 15; 
+    const textStartX = START_X + (avatarUrls.length * (AVATAR_SIZE + 5)) + 15; 
     
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
@@ -99,13 +104,6 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 410);
-
-    let currentX = textStartX + 150; 
-    const SPACING = 5; 
-    for (let i = 1; i < avatarUrls.length; i++) {
-        await drawAvatar(avatarUrls[i], currentX, Y_AVATARS, AVATAR_SIZE);
-        currentX += (AVATAR_SIZE + SPACING);
-    }
 
     ctx.fillStyle = '#777777';
     ctx.font = `bold 14px "${FONT_NAME}"`;
@@ -120,17 +118,6 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     ctx.fillText(memberSince, START_X, 580);
     ctx.fillText(joinedServer, START_X + 250, 580);
 
-    return canvas;
-}
-
-async function createDesignCard(bannerUrl, member) {
-    const canvas = createCanvas(1000, 600);
-    const ctx = canvas.getContext('2d');
-    // خلفية سوداء لأمر التصميم
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, 1000, 600);
-    const banner = await loadImage(bannerUrl);
-    drawImageCover(ctx, banner, 40, 40, 920, 300);
     return canvas;
 }
 
@@ -157,9 +144,8 @@ client.on(Events.MessageCreate, async (message) => {
         const avatarUrls = [];
         for(let i = 1; i <= count; i++) avatarUrls.push(message.attachments.at(i).url);
 
-        const canvas = (command === '!design') 
-            ? await createDesignCard(bannerUrl, message.member)
-            : await createMatchingCard(bannerUrl, avatarUrls, message.member);
+        // استخدام الدالة الموحدة لجميع الأوامر
+        const canvas = await drawFullCard(bannerUrl, avatarUrls, message.member);
             
         const attachment = new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 
@@ -173,7 +159,6 @@ client.on(Events.MessageCreate, async (message) => {
                 files: [attachment],
                 components: [row]
             });
-            // حفظ البيانات في الذاكرة
             designCache.set(sentMessage.id, { banner: bannerUrl, avatars: avatarUrls });
         }
         await message.delete().catch(() => {});
@@ -188,7 +173,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
     
     const data = designCache.get(interaction.message.id);
-    if (!data) return interaction.reply({ content: '❌ حدث خطأ: لا يمكن العثور على الصور في الذاكرة (ربما تمت إعادة تشغيل البوت). يرجى طلب التصميم مجدداً.', ephemeral: true });
+    if (!data) return interaction.reply({ content: '❌ حدث خطأ، يرجى إعادة طلب التصميم.', ephemeral: true });
 
     if (interaction.customId === 'try_design') {
         await interaction.reply({ 
