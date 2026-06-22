@@ -68,20 +68,19 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300); 
 
-    // --- تم زيادة الحجم وتقليل المسافات ---
-    const AVATAR_SIZE = 180; 
-    const START_X = 60;
+    // --- إعدادات الحجم والموقع ---
+    const AVATAR_SIZE = 160; // تم ضبط الحجم ليتناسب مع المساحة
     const Y_AVATARS = 340; 
-    const SPACING = 10; // قللنا المسافة
+    const START_X = 60;
     
     // دالة لرسم الأفاتار مع حواف سوداء
     async function drawAvatar(url, x, y, size) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#000000'; 
+        ctx.fillStyle = '#000000';
         ctx.fill();
-        ctx.lineWidth = 8; // سمك الحافة
+        ctx.lineWidth = 8;
         ctx.strokeStyle = '#000000';
         ctx.stroke();
         ctx.clip();
@@ -94,7 +93,7 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     await drawAvatar(avatarUrls[0], START_X, Y_AVATARS, AVATAR_SIZE);
 
     // 2. النصوص
-    const textStartX = START_X + AVATAR_SIZE + 20; // تقريب النص للأفاتار
+    const textStartX = START_X + AVATAR_SIZE + 20; 
     
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
@@ -102,10 +101,11 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 425);
+    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 420);
 
-    // 3. رسم الأفاتارات الباقية
-    let currentX = textStartX + 200; // تقريب مسافة الأفاتارات الثانية
+    // 3. رسم الأفاتارات الباقية (تم تقليل المسافة لضمان عدم الخروج من الكانفاس)
+    let currentX = textStartX + 180; 
+    const SPACING = 10; 
     for (let i = 1; i < avatarUrls.length; i++) {
         await drawAvatar(avatarUrls[i], currentX, Y_AVATARS, AVATAR_SIZE);
         currentX += (AVATAR_SIZE + SPACING);
