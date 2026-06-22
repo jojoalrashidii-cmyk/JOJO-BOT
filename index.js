@@ -58,7 +58,7 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
-async function drawAvatars(ctx, avatarUrls, startX, y, size = 150) {
+async function drawAvatars(ctx, avatarUrls, startX, y, size = 200) {
     for (let i = 0; i < avatarUrls.length; i++) {
         ctx.save();
         ctx.beginPath();
@@ -76,7 +76,6 @@ async function drawAvatars(ctx, avatarUrls, startX, y, size = 150) {
     }
 }
 
-// دالة خاصة للماتشينق بالتصميم الجديد
 async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
@@ -87,26 +86,23 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300); 
     
-    // الأفاتارات كبيرة (200)
-    const AVATAR_SIZE = 200;
-    await drawAvatars(ctx, avatarUrls, 60, 320, AVATAR_SIZE);
+    // رسم الأفاتارات بحجم 200
+    await drawAvatars(ctx, avatarUrls, 60, 320, 200);
 
-    // النصوص والبيانات تحت الأفاتارات (بدءاً من Y=550)
-    const textStartX = 60;
-    const textStartY = 550;
-
+    // النصوص (الاسم واليوزر)
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, textStartX, textStartY);
+    ctx.fillText(member.user.username, 60, 560);
     
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, textStartY + 40);
+    ctx.fillText('@' + member.user.username.toLowerCase(), 60, 590);
 
+    // التواريخ
     ctx.fillStyle = '#777777';
     ctx.font = `bold 12px "${FONT_NAME}"`;
-    ctx.fillText('MEMBER SINCE', textStartX, textStartY + 80);
-    ctx.fillText('JOINED SERVER', textStartX + 250, textStartY + 80);
+    ctx.fillText('MEMBER SINCE', 400, 550);
+    ctx.fillText('JOINED SERVER', 650, 550);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = `18px "${FONT_NAME}"`;
@@ -114,13 +110,12 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const memberSince = member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
     const joinedServer = member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
     
-    ctx.fillText(memberSince, textStartX, textStartY + 105);
-    ctx.fillText(joinedServer, textStartX + 250, textStartY + 105);
+    ctx.fillText(memberSince, 400, 575);
+    ctx.fillText(joinedServer, 650, 575);
 
     return canvas;
 }
 
-// دالة التصميم العادي (لأمر !design) كما هي
 async function createDesignCard(bannerUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
@@ -128,7 +123,6 @@ async function createDesignCard(bannerUrl, member) {
     ctx.fillRect(0, 0, 1000, 600);
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300);
-    // يمكنك تعديل تنسيق هذا إذا أردت
     return canvas;
 }
 
