@@ -6,9 +6,14 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
+// --- إعداد الفونت ---
 const FONT_NAME = 'MyCustomFont';
 const fontPath = path.join(__dirname, 'font.ttf');
-if (fs.existsSync(fontPath)) GlobalFonts.registerFromPath(fontPath, FONT_NAME);
+if (fs.existsSync(fontPath)) {
+    GlobalFonts.registerFromPath(fontPath, FONT_NAME);
+} else {
+    console.error('⚠️ تحذير: ملف font.ttf غير موجود في المجلد!');
+}
 
 const app = express();
 app.listen(process.env.PORT || 3000);
@@ -17,23 +22,18 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates] 
 });
 
-const PROFILE_CHANNEL_ID = '1501583456872829068'; 
-const BUTTON_CHANNEL_ID = '1501583456872829068'; 
+const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
 const isProcessing = new Set();
 
-// --- تفعيل الستريم والاتصال بالروم ---
+// --- اتصال البوت والستريم ---
 client.once(Events.ClientReady, async (c) => {
-    console.log(`✅ البوت متصل: ${c.user.tag}`);
-    
-    // ضبط حالة الستريم
     client.user.setPresence({ 
         activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }], 
         status: 'online' 
     });
-
-    // الاتصال بالروم الصوتي
+    
     const vc = client.channels.cache.get(VOICE_CHANNEL_ID);
     if (vc) {
         const connection = joinVoiceChannel({
@@ -41,7 +41,7 @@ client.once(Events.ClientReady, async (c) => {
             guildId: vc.guild.id,
             adapterCreator: vc.guild.voiceAdapterCreator,
         });
-        connection.on(VoiceConnectionStatus.Ready, () => console.log('✅ تم الاتصال بالروم الصوتي!'));
+        connection.on(VoiceConnectionStatus.Ready, () => console.log('✅ متصل بالروم الصوتي!'));
     }
 });
 
@@ -57,12 +57,13 @@ function drawImageCover(ctx, img, x, y, width, height) {
 async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
+
     ctx.fillStyle = '#0f0f0f';
     ctx.fillRect(0, 0, 1000, 600);
-    
+
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 0, 0, 1000, 350); 
-    
+
     ctx.save();
     ctx.beginPath();
     ctx.arc(140, 350, 90, 0, Math.PI * 2);
@@ -74,10 +75,11 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
     ctx.fillText(member.user.username, 260, 370);
+    
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), 260, 405);
-    
+
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -89,10 +91,12 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.font = `bold 14px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', 50, 520);
     ctx.fillText('JOINED SERVER', 550, 520);
+
     ctx.fillStyle = '#ffffff';
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 555);
     ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 555);
+
     return canvas;
 }
 
@@ -102,37 +106,49 @@ client.on(Events.MessageCreate, async (message) => {
     if (message.attachments.size < 2) return;
 
     isProcessing.add(message.author.id);
+    const targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
+    
     try {
         const canvas = await createProfileCard(message.attachments.first().url, message.attachments.at(1).url, message.member);
         const buffer = await canvas.encode('png');
         const attachment = new AttachmentBuilder(buffer, { name: 'profile.png' });
-
-        const profileChannel = client.channels.cache.get(PROFILE_CHANNEL_ID);
-        if (profileChannel) await profileChannel.send({ files: [attachment] });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('try_design').setLabel('Try').setStyle(ButtonStyle.Secondary).setEmoji('1518609977386733678'),
             new ButtonBuilder().setCustomId('send_dm').setLabel('DM').setStyle(ButtonStyle.Secondary).setEmoji('1518609827599880253')
         );
 
-        const buttonChannel = client.channels.cache.get(BUTTON_CHANNEL_ID);
-        if (buttonChannel) await buttonChannel.send({ components: [row] });
-        
+        if (targetChannel) {
+            await targetChannel.send({ 
+                files: [attachment],
+                components: [row]
+            });
+        }
         await message.delete().catch(() => {});
-    } catch (err) { console.error(err); } finally { isProcessing.delete(message.author.id); }
+    } catch (err) {
+        console.error(err);
+    } finally {
+        isProcessing.delete(message.author.id);
+    }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
+
     if (interaction.customId === 'try_design') {
         await interaction.reply({ content: '🎨 أرسل الصورتين هنا للتجربة!', ephemeral: true });
     } else if (interaction.customId === 'send_dm') {
         try {
-            const canvas = await createProfileCard(interaction.message.attachments.first()?.url || 'https://via.placeholder.com/150', 'https://via.placeholder.com/150', interaction.member);
+            const canvas = await createProfileCard(interaction.message.attachments.first().url, interaction.message.attachments.first().url, interaction.member);
             const buffer = await canvas.encode('png');
-            await interaction.user.send({ files: [new AttachmentBuilder(buffer, { name: 'profile.png' })] });
+            await interaction.user.send({ 
+                content: '📸 إليك تصميمك:', 
+                files: [new AttachmentBuilder(buffer, { name: 'profile.png' })] 
+            });
             await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
-        } catch (err) { await interaction.reply({ content: '❌ افتح الخاص!', ephemeral: true }); }
+        } catch (err) {
+            await interaction.reply({ content: '❌ افتح الخاص يا وحش!', ephemeral: true });
+        }
     }
 });
 
