@@ -26,7 +26,6 @@ const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
 const isProcessing = new Set();
-// مخزن مؤقت للصور الأصلية
 const designCache = new Map();
 
 // --- اتصال البوت والستريم ---
@@ -56,6 +55,7 @@ function drawImageCover(ctx, img, x, y, width, height) {
     ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, width, height);
 }
 
+// --- الإحداثيات المحدثة لضبط الخط ---
 async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
@@ -79,13 +79,14 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.drawImage(avatar, 50, 260, 180, 180);
     ctx.restore();
 
+    // 4. النصوص (تم إنزالها للأسفل لتتوسط الأفاتار)
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 35px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, 260, 360);
+    ctx.font = `bold 40px "${FONT_NAME}"`;
+    ctx.fillText(member.user.username, 260, 380);
     
     ctx.fillStyle = '#aaaaaa';
-    ctx.font = `18px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 395);
+    ctx.font = `20px "${FONT_NAME}"`;
+    ctx.fillText('@' + member.user.username.toLowerCase(), 260, 420);
 
     ctx.strokeStyle = '#222222';
     ctx.lineWidth = 1;
@@ -133,7 +134,6 @@ client.on(Events.MessageCreate, async (message) => {
                 files: [attachment],
                 components: [row]
             });
-            // حفظ الصور للرسالة المرسلة
             designCache.set(sentMessage.id, { banner: bannerUrl, avatar: avatarUrl });
         }
         await message.delete().catch(() => {});
@@ -148,23 +148,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
     
     const data = designCache.get(interaction.message.id);
-    
-    if (interaction.customId === 'try_design') {
-        if (!data) return interaction.reply({ content: '❌ حدث خطأ في البيانات!', ephemeral: true });
-        await interaction.reply({ content: `🎨 إليك الصور الأصلية:\nالبانر: ${data.banner}\nالأفاتار: ${data.avatar}`, ephemeral: true });
-    } else if (interaction.customId === 'send_dm') {
-        try {
-            if (!data) return interaction.reply({ content: '❌ حدث خطأ في البيانات!', ephemeral: true });
-            
-            // إرسال الصور الأصلية للخاص
-            await interaction.user.send({ 
-                content: '📸 إليك الصور الأصلية التي استخدمتها في التصميم:', 
-                files: [data.banner, data.avatar] 
-            });
-            await interaction.reply({ content: '✅ تم إرسال الصور الأصلية للخاص!', ephemeral: true });
-        } catch (err) {
-            await interaction.reply({ content: '❌ افتح الخاص يا وحش!', ephemeral: true });
-        }
+    if (!data) return interaction.reply({ content: '❌ حدث خطأ، لم أجد الصور الأصلية!', ephemeral: true });
+
+    // إرسال الصور الأصلية مباشرة كملفات (Files)
+    try {
+        await interaction.reply({ 
+            content: '📸 إليك الصور الأصلية التي تم التصميم بها:', 
+            files: [data.banner, data.avatar], 
+            ephemeral: true 
+        });
+    } catch (err) {
+        console.error(err);
     }
 });
 
