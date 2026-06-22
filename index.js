@@ -68,9 +68,9 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     const banner = await loadImage(bannerUrl);
     drawImageCover(ctx, banner, 40, 40, 920, 300); 
 
-    // --- إعدادات الحجم والموقع ---
-    const AVATAR_SIZE = 160; // تم ضبط الحجم ليتناسب مع المساحة
-    const Y_AVATARS = 340; 
+    // --- تم تكبير الأفاتارات ---
+    const AVATAR_SIZE = 200; 
+    const Y_AVATARS = 330; 
     const START_X = 60;
     
     // دالة لرسم الأفاتار مع حواف سوداء
@@ -80,7 +80,7 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
         ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
         ctx.fillStyle = '#000000';
         ctx.fill();
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 10; // زيادة سمك الحافة لتتناسب مع الحجم
         ctx.strokeStyle = '#000000';
         ctx.stroke();
         ctx.clip();
@@ -92,18 +92,18 @@ async function createMatchingCard(bannerUrl, avatarUrls, member) {
     // 1. رسم الأفاتار الأول
     await drawAvatar(avatarUrls[0], START_X, Y_AVATARS, AVATAR_SIZE);
 
-    // 2. النصوص
+    // 2. النصوص (تم إزاحتها قليلاً لتناسب الحجم الجديد)
     const textStartX = START_X + AVATAR_SIZE + 20; 
     
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, textStartX, 390);
+    ctx.fillText(member.user.username, textStartX, 380);
     
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 420);
+    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 415);
 
-    // 3. رسم الأفاتارات الباقية (تم تقليل المسافة لضمان عدم الخروج من الكانفاس)
+    // 3. رسم الأفاتارات الباقية
     let currentX = textStartX + 180; 
     const SPACING = 10; 
     for (let i = 1; i < avatarUrls.length; i++) {
