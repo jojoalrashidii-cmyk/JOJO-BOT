@@ -1,8 +1,12 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType, Events, PermissionsBitField, ComponentType } = require('discord.js');
+const { Client, GatewayIntentBits, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType, Events, PermissionsBitField } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const express = require('express');
+const path = require('path');
+
+// تحميل الخط من ملف موجود في المشروع
+GlobalFonts.registerFromPath(path.join(__dirname, 'font.ttf'), 'MyCustomFont');
 
 const app = express();
 app.get('/', (req, res) => res.send('Bot is running!'));
@@ -75,7 +79,7 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(800, 450);
     const ctx = canvas.getContext('2d');
     
-    ctx.fillStyle = '#0a0a0a'; // خلفية سوداء داكنة
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, 800, 450);
     
     const banner = await loadImage(bannerUrl);
@@ -89,17 +93,15 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     await drawImageCover(ctx, avatar, 55, 175, 150, 150);
     ctx.restore();
     
-    // الاسم
+    // استخدام الخط الجديد هنا
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 30px "Times New Roman"';
+    ctx.font = 'bold 30px "MyCustomFont"';
     ctx.fillText(member.user.username, 230, 275);
     
-    // المعرف
     ctx.fillStyle = '#888888';
-    ctx.font = '18px sans-serif';
+    ctx.font = '18px "MyCustomFont"';
     ctx.fillText('@' + member.user.username.toLowerCase(), 230, 305);
     
-    // الخط الفاصل
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -107,14 +109,13 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.lineTo(750, 360);
     ctx.stroke();
     
-    // التواريخ
     ctx.fillStyle = '#777777';
-    ctx.font = 'bold 14px "Times New Roman"';
+    ctx.font = 'bold 14px "MyCustomFont"';
     ctx.fillText('MEMBER SINCE', 50, 390);
     ctx.fillText('JOINED SERVER', 420, 390);
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = '16px "Times New Roman"';
+    ctx.font = '16px "MyCustomFont"';
     ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
     ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
     
