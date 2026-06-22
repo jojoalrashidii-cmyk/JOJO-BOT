@@ -12,10 +12,10 @@ if (fs.existsSync(fontPath)) {
     GlobalFonts.registerFromPath(fontPath, 'MyCustomFont');
     console.log('✅ تم تحميل الخط المخصص بنجاح.');
 } else {
-    console.warn('⚠️ تحذير: ملف font.ttf غير موجود. سيتم استخدام الخط الافتراضي.');
+    console.warn('⚠️ تحذير: لم يتم العثور على font.ttf، سيتم استخدام الخط الافتراضي.');
 }
 
-// --- 2. إعداد الخادم (للحفاظ على استمرار البوت في رايواي) ---
+// --- 2. إعداد الخادم ---
 const app = express();
 app.get('/', (req, res) => res.send('Bot is running!'));
 app.listen(process.env.PORT || 3000);
@@ -31,7 +31,6 @@ const client = new Client({
     ] 
 });
 
-// الثوابت
 const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const EMOJI_ID = '1513336672870469793';
@@ -67,58 +66,61 @@ client.once('ready', async () => {
     }
 });
 
-// --- 4. دالة الرسم ---
+// --- 4. دالة الرسم (معدلة للحصول على المساحات والحواف المطلوبة) ---
 async function createProfileCard(bannerUrl, avatarUrl, member) {
-    const canvas = createCanvas(800, 450);
+    const canvas = createCanvas(900, 400); // حجم أكبر قليلاً لتناسب النسب
     const ctx = canvas.getContext('2d');
     
-    // خلفية داكنة
+    // الخلفية الأساسية (اللون اللي يظهر في الحواف)
     ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, 800, 450);
+    ctx.fillRect(0, 0, 900, 400);
     
-    // رسم البانر بملء الشاشة (بدون قص)
+    // رسم البانر مع "هوامش" (Padding)
+    const padding = 30; // الحواف المطلوبة
+    const bannerW = 900 - (padding * 2);
+    const bannerH = 200;
+    
     const banner = await loadImage(bannerUrl);
-    ctx.drawImage(banner, 0, 0, 800, 250);
+    ctx.drawImage(banner, padding, padding, bannerW, bannerH);
     
-    // دائرة الأفاتار
+    // رسم الأفاتار
     ctx.save();
     ctx.beginPath();
-    ctx.arc(130, 250, 75, 0, Math.PI * 2);
+    ctx.arc(100, 270, 65, 0, Math.PI * 2);
     ctx.clip();
     const avatar = await loadImage(avatarUrl);
-    ctx.drawImage(avatar, 55, 175, 150, 150);
+    ctx.drawImage(avatar, 35, 205, 130, 130);
     ctx.restore();
     
-    // إعدادات الخط
+    // الخطوط والنصوص
     const font = fs.existsSync(fontPath) ? '"MyCustomFont"' : 'sans-serif';
     
-    // الاسم والمعرف
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 30px ${font}`;
-    ctx.fillText(member.user.username, 230, 275);
+    ctx.font = `bold 28px ${font}`;
+    ctx.fillText(member.user.username, 190, 280);
     
     ctx.fillStyle = '#888888';
-    ctx.font = `18px ${font}`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), 230, 305);
+    ctx.font = `16px ${font}`;
+    ctx.fillText('@' + member.user.username.toLowerCase(), 190, 310);
     
     // الخط الفاصل
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(50, 360);
-    ctx.lineTo(750, 360);
+    ctx.moveTo(padding, 350);
+    ctx.lineTo(870, 350);
     ctx.stroke();
     
     // التواريخ
     ctx.fillStyle = '#777777';
-    ctx.font = `bold 14px ${font}`;
-    ctx.fillText('MEMBER SINCE', 50, 390);
-    ctx.fillText('JOINED SERVER', 420, 390);
+    ctx.font = `bold 12px ${font}`;
+    ctx.fillText('MEMBER SINCE', padding, 380);
+    ctx.fillText('JOINED SERVER', 500, 380);
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = `16px ${font}`;
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 415);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 420, 415);
+    ctx.font = `14px ${font}`;
+    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US'), padding, 395);
+    ctx.fillText(member.joinedAt.toLocaleDateString('en-US'), 500, 395);
     
     return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
 }
