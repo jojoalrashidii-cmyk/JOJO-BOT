@@ -6,8 +6,14 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
+// --- إعداد الفونت ---
 const fontPath = path.join(__dirname, 'font.ttf');
-if (fs.existsSync(fontPath)) GlobalFonts.registerFromPath(fontPath, 'MyCustomFont');
+if (fs.existsSync(fontPath)) {
+    GlobalFonts.registerFromPath(fontPath, 'MyCustomFont');
+} else {
+    console.error('⚠️ تحذير: ملف font.ttf غير موجود في المجلد!');
+}
+const FONT_NAME = 'MyCustomFont'; // هنا تم تثبيت اسم الفونت
 
 const app = express();
 app.listen(process.env.PORT || 3000);
@@ -19,8 +25,6 @@ const client = new Client({
 const TARGET_CHANNEL_ID = '1501583456872829068';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
-
-// نظام لمنع التكرار (Anti-Spam)
 const isProcessing = new Set();
 
 function drawImageCover(ctx, img, x, y, width, height) {
@@ -35,7 +39,6 @@ function drawImageCover(ctx, img, x, y, width, height) {
 async function createProfileCard(bannerUrl, avatarUrl, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
-    const font = fs.existsSync(fontPath) ? '"MyCustomFont"' : 'Arial';
 
     ctx.fillStyle = '#0f0f0f';
     ctx.fillRect(0, 0, 1000, 600);
@@ -51,12 +54,13 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.drawImage(avatar, 65, 285, 170, 170);
     ctx.restore();
 
+    // استخدام الفونت المخصص في كل النصوص
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 32px ${font}`;
+    ctx.font = `bold 32px "${FONT_NAME}"`;
     ctx.fillText(member.user.username, 260, 380);
     
     ctx.fillStyle = '#aaaaaa';
-    ctx.font = `18px ${font}`;
+    ctx.font = `18px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), 260, 410);
 
     ctx.strokeStyle = '#222222';
@@ -67,12 +71,12 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.stroke();
 
     ctx.fillStyle = '#666666';
-    ctx.font = `bold 12px ${font}`;
+    ctx.font = `bold 12px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', 50, 520);
     ctx.fillText('JOINED SERVER', 550, 520);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `16px ${font}`;
+    ctx.font = `16px "${FONT_NAME}"`;
     ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 550);
     ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 550);
 
@@ -86,11 +90,7 @@ client.once('ready', async () => {
 });
 
 client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot || !message.content.startsWith('!design')) return;
-    
-    // منع التكرار: إذا كان المستخدم يرسل طلباً وهو لا يزال يعالج السابق
-    if (isProcessing.has(message.author.id)) return;
-    
+    if (message.author.bot || !message.content.startsWith('!design') || isProcessing.has(message.author.id)) return;
     if (!message.member.roles.cache.has(ROLE_ID)) return message.reply('❌ ليس لديك الصلاحية.');
     if (message.attachments.size < 2) return message.reply('⚠️ يرجى إرفاق صورتين.');
 
