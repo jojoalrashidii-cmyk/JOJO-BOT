@@ -75,23 +75,4 @@ async function createProfileCard(bannerUrl, avatarUrl, member) {
     ctx.fillText('JOINED SERVER', 550, 520);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `16px "${FONT_NAME}"`;
-    ctx.fillText(member.user.createdAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 50, 550);
-    ctx.fillText(member.joinedAt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}), 550, 550);
-
-    return new AttachmentBuilder(await canvas.encode('png'), { name: 'profile.png' });
-}
-
-client.once(Events.ClientReady, async (c) => {
-    client.user.setPresence({ activities: [{ name: 'JOJO’s Designs', type: ActivityType.Streaming, url: 'https://www.twitch.tv/discord' }], status: 'online' });
-    const vc = client.channels.cache.get(VOICE_CHANNEL_ID);
-    if (vc) joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator });
-});
-
-client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot || !message.content.startsWith('!design') || isProcessing.has(message.author.id)) return;
-    if (!message.member.roles.cache.has(ROLE_ID)) return message.reply('❌ ليس لديك الصلاحية.');
-    if (message.attachments.size < 2) return message.reply('⚠️ يرجى إرفاق صورتين.');
-
-    isProcessing.add(message.author.id);
-    const targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
+    ctx.font = `1
