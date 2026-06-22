@@ -7,12 +7,14 @@ const path = require('path');
 const fs = require('fs');
 
 // --- إعداد الفونت ---
-const FONT_NAME = 'MyCustomFont';
+const FONT_NAME = 'MyCustomFont'; // تأكد أن هذا الاسم يطابق اسم الخط داخل الملف
 const fontPath = path.join(__dirname, 'font.ttf');
+
 if (fs.existsSync(fontPath)) {
     GlobalFonts.registerFromPath(fontPath, FONT_NAME);
+    console.log('✅ تم تحميل الخط بنجاح');
 } else {
-    console.error('⚠️ تحذير: ملف font.ttf غير موجود في المجلد!');
+    console.error('⚠️ خطأ: ملف font.ttf غير موجود في المجلد!');
 }
 
 const app = express();
