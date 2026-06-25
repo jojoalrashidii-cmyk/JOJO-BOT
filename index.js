@@ -184,37 +184,45 @@ client.on(Events.MessageCreate, async (message) => {
     }
 });
 
-client.on(Events.InteractionCreate, async (interaction) => { 
-    if (!interaction.isButton()) return; 
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isButton()) return;
     
-    const data = designCache.get(interaction.message.id); 
-    if (!data) return interaction.reply({ content: '❌ حدث خطأ: لا يمكن العثور على الصور في الذاكرة (ربما تمت إعادة تشغيل البوت). يرجى طلب التصميم مجدداً.', ephemeral: true }); 
+    // نقوم بجلب الرسالة التي ضغط المستخدم على زرها
+    const message = await interaction.message.fetch();
+    
+    // نستخرج الروابط من المرفقات (Attachments) الموجودة في الرسالة الأصلية
+    // ملاحظة: الأفاتار هو المرفق الثاني والثالث.. والبنر هو الأول
+    const attachments = Array.from(message.attachments.values());
+    if (attachments.length < 2) return interaction.reply({ content: '❌ لا توجد صور مرتبطة بهذه الرسالة.', ephemeral: true });
 
-    // هنا نقوم بتحويل الروابط إلى كائنات AttachmentBuilder لضمان عرضها كصور سليمة
-    const files = [data.banner, ...data.avatars].map((url, index) => 
+    // البنر هو المرفق الأول، البقية هم الأفاتارات
+    const bannerUrl = attachments[0].url;
+    const avatarUrls = attachments.slice(1).map(att => att.url);
+
+    const files = [bannerUrl, ...avatarUrls].map((url, index) => 
         new AttachmentBuilder(url, { name: `image${index}.png` })
     );
 
-    if (interaction.customId === 'try_design') { 
-        await interaction.reply({  
-            content: 'خذ خذ وتوكل:',  
-            files: files, // هنا استخدمنا المصفوفة المصححة
-            ephemeral: true  
-        }); 
-    } else if (interaction.customId === 'send_dm') { 
-        try { 
-            await interaction.user.send({  
-                content: 'خذ خذ بس وفارق:',  
-                files: files // هنا استخدمنا المصفوفة المصححة
-            }); 
-            await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true }); 
-        } catch (err) { 
-            await interaction.reply({  
-                content: 'تسوقمها؟ كيف برسل لك الافتار وانت مسكر خاصك يخوي؟',  
-                ephemeral: true  
-            }); 
-        } 
-    } 
-}); 
+    if (interaction.customId === 'try_design') {
+        await interaction.reply({ 
+            content: 'خذ خذ وتوكل:', 
+            files: files, 
+            ephemeral: true 
+        });
+    } else if (interaction.customId === 'send_dm') {
+        try {
+            await interaction.user.send({ 
+                content: 'خذ خذ بس وفارق:', 
+                files: files 
+            });
+            await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
+        } catch (err) {
+            await interaction.reply({ 
+                content: 'تسوقمها؟ كيف برسل لك الافتار وانت مسكر خاصك يخوي؟', 
+                ephemeral: true 
+            });
+        }
+    }
+});
 
 client.login(process.env.TOKEN);
