@@ -63,16 +63,15 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     const canvas = createCanvas(1000, 600);
     const ctx = canvas.getContext('2d');
 
-    // 1. الخلفية سوداء
+    // الخلفية سوداء
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, 1000, 600);
 
-    // 2. رسم البنر (استخدام 0, 0, 1000, 300 يجعله يغطي العرض العلوي كاملاً)
     const banner = await loadImage(bannerUrl);
-    ctx.drawImage(banner, 0, 0, 1000, 300); 
+    drawImageCover(ctx, banner, 40, 40, 920, 300); 
 
     const AVATAR_SIZE = 180;
-    const Y_AVATARS = 210; // رفعنا الأفاتار للأعلى ليتداخل مع البنر
+    const Y_AVATARS = 330; 
     const START_X = 60;
     
     async function drawAvatar(url, x, y, size) {
@@ -90,30 +89,32 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
         ctx.restore();
     }
 
-    // 3. رسم الأفاتار الرئيسي (المتداخل)
+    // 1. رسم الأفاتار الأول (الرئيسي)
     await drawAvatar(avatarUrls[0], START_X, Y_AVATARS, AVATAR_SIZE);
 
-    // 4. رسم النص (مرفوع للأعلى ليناسب مكان الأفاتار الجديد)
+    // 2. رسم النص (الاسم واليوزر) بجانب الأفاتار الأول
     const textStartX = START_X + AVATAR_SIZE + 20;
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold 40px "${FONT_NAME}"`;
-    ctx.fillText(member.user.username, textStartX, 260);
+    ctx.fillText(member.user.username, textStartX, 380);
     
     ctx.fillStyle = '#aaaaaa';
     ctx.font = `20px "${FONT_NAME}"`;
-    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 290);
+    ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 410);
 
-    // 5. رسم بقية الأفاتارات
+    // 3. رسم بقية الأفاتارات: تم ضبط الإحداثيات والمسافات لضمان التنسيق الصحيح
+    // نبدأ من بعد النص مباشرة مع إضافة هامش بسيط
     let currentX = textStartX + 100; 
-    const spacing = 20;
+    const spacing = 20; // المسافة بين الأفاتارات الإضافية
 
     for (let i = 1; i < avatarUrls.length; i++) {
+        // إذا كان الأفاتار سيتجاوز حدود الـ 950، نتوقف أو نعدل الموقع (هنا التنسيق متوافق مع 4 أفاتارات)
         if (currentX + AVATAR_SIZE > 980) break;
+        
         await drawAvatar(avatarUrls[i], currentX, Y_AVATARS, AVATAR_SIZE);
         currentX += (AVATAR_SIZE + spacing);
     }
 
-    // 6. التواريخ (في الأسفل)
     ctx.fillStyle = '#777777';
     ctx.font = `bold 14px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', START_X, 550);
@@ -128,6 +129,12 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     ctx.fillText(joinedServer, START_X + 250, 580);
 
     return canvas;
+}
+
+client.on(Events.MessageCreate, async (message) => {
+    if (message.author.bot || !message.member?.roles.cache.has(ROLE_ID) || isProcessing.has(message.author.id))
+        return;
+
 }
 
 client.on(Events.MessageCreate, async (message) => {
