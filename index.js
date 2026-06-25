@@ -178,27 +178,38 @@ client.on(Events.MessageCreate, async (message) => {
     }
 });
 
-// --- داخل جزء الـ interactionCreate ---
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isButton()) return;
+    
+    const data = designCache.get(interaction.message.id);
+    if (!data) return interaction.reply({ content: '❌ حدث خطأ، يرجى طلب التصميم مجدداً.', ephemeral: true });
 
-if (interaction.customId === 'try_design') {
-    // نقوم بدمج الروابط في نص واحد
-    const allUrls = [data.banner, ...data.avatars].join('\n');
-    await interaction.reply({ 
-        content: `خذ خذ وتوكل:\n${allUrls}`, 
-        ephemeral: true 
-    });
-} else if (interaction.customId === 'send_dm') {
-    try {
-        const allUrls = [data.banner, ...data.avatars].join('\n');
-        await interaction.user.send({ 
-            content: `خذ خذ بس وفارق:\n${allUrls}`
-        });
-        await interaction.reply({ content: '✅ تم إرسال الروابط للخاص!', ephemeral: true });
-    } catch (err) {
+    // تحضير الصور كملفات (Attachments) لضمان ظهورها كصور
+    const files = [data.banner, ...data.avatars].map((url, index) => 
+        new AttachmentBuilder(url, { name: `image${index}.png` })
+    );
+
+    if (interaction.customId === 'try_design') {
         await interaction.reply({ 
-            content: 'تسوقمها؟ كيف برسل لك الافتار وانت مسكر خاصك يخوي؟', 
+            content: 'خذ خذ وتوكل:', 
+            files: files, 
             ephemeral: true 
         });
+    } else if (interaction.customId === 'send_dm') {
+        try {
+            await interaction.user.send({ 
+                content: 'خذ خذ بس وفارق:', 
+                files: files // تم التعديل هنا لاستخدام الـ files المحضرة
+            });
+            await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
+        } catch (err) {
+            console.error(err);
+            await interaction.reply({ 
+                content: 'تسوقمها؟ كيف برسل لك الافتار وانت مسكر خاصك يخوي؟', 
+                ephemeral: true 
+            });
+        }
     }
-}
-client.login(process.env.TOKEN); 
+});
+
+client.login(process.env.TOKEN);
