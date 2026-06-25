@@ -134,7 +134,6 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
 client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot || !message.member?.roles.cache.has(ROLE_ID) || isProcessing.has(message.author.id))
         return;
-
 }
 
 client.on(Events.MessageCreate, async (message) => {
