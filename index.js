@@ -184,12 +184,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const data = designCache.get(interaction.message.id);
     if (!data) return interaction.reply({ content: '❌ حدث خطأ: لا يمكن العثور على الصور في الذاكرة (ربما تمت إعادة تشغيل البوت). يرجى طلب التصميم مجدداً.', ephemeral: true });
 
-    if (interaction.customId === 'try_design') {
-        await interaction.reply({ 
-            content: 'خذ خذ وتوكل:', 
-            files: [data.banner, ...data.avatars], 
-            ephemeral: true 
-        });
+    const { AttachmentBuilder } = require('discord.js'); // تأكد من استيرادها في الأعلى
+
+// ... داخل interactionCreate ...
+
+if (interaction.customId === 'try_design') {
+    // نقوم بتحويل روابط الصور إلى كائنات AttachmentBuilder
+    const files = [data.banner, ...data.avatars].map((url, index) => 
+        new AttachmentBuilder(url, { name: `image${index}.png` })
+    );
+
+    await interaction.reply({ 
+        content: 'خذ خذ وتوكل:', 
+        files: files, // هنا نرسل مصفوفة الـ Attachments وليس الروابط النصية
+        ephemeral: true 
+    });
+}
     } else if (interaction.customId === 'send_dm') {
         try {
             await interaction.user.send({ 
