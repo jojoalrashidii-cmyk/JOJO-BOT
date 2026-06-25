@@ -29,7 +29,6 @@ const MATCHING_CHANNEL_ID = '1518670780911583283';
 const VOICE_CHANNEL_ID = '1518127536834613360';
 const ROLE_ID = '1501374221992071348';
 const isProcessing = new Set();
-const designCache = new Map();
 
 // --- اتصال البوت والستريم ---
 client.once(Events.ClientReady, async (c) => {
@@ -102,19 +101,17 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     ctx.font = `20px "${FONT_NAME}"`;
     ctx.fillText('@' + member.user.username.toLowerCase(), textStartX, 410);
 
-    // 3. رسم بقية الأفاتارات: تم ضبط الإحداثيات والمسافات لضمان التنسيق الصحيح
-    // نبدأ من بعد النص مباشرة مع إضافة هامش بسيط
+    // 3. رسم بقية الأفاتارات
     let currentX = textStartX + 100; 
-    const spacing = 20; // المسافة بين الأفاتارات الإضافية
+    const spacing = 20; 
 
     for (let i = 1; i < avatarUrls.length; i++) {
-        // إذا كان الأفاتار سيتجاوز حدود الـ 950، نتوقف أو نعدل الموقع (هنا التنسيق متوافق مع 4 أفاتارات)
         if (currentX + AVATAR_SIZE > 980) break;
         
         await drawAvatar(avatarUrls[i], currentX, Y_AVATARS, AVATAR_SIZE);
         currentX += (AVATAR_SIZE + spacing);
     }
-});
+
     ctx.fillStyle = '#777777';
     ctx.font = `bold 14px "${FONT_NAME}"`;
     ctx.fillText('MEMBER SINCE', START_X, 550);
@@ -129,11 +126,6 @@ async function createUnifiedCard(bannerUrl, avatarUrls, member) {
     ctx.fillText(joinedServer, START_X + 250, 580);
 
     return canvas;
-}
-
-client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot || !message.member?.roles.cache.has(ROLE_ID) || isProcessing.has(message.author.id))
-        return;
 }
 
 client.on(Events.MessageCreate, async (message) => {
@@ -169,11 +161,10 @@ client.on(Events.MessageCreate, async (message) => {
         );
 
         if (targetChannel) {
-            const sentMessage = await targetChannel.send({ 
+            await targetChannel.send({ 
                 files: [attachment],
                 components: [row]
             });
-            designCache.set(sentMessage.id, { banner: bannerUrl, avatars: avatarUrls });
         }
         await message.delete().catch(() => {});
     } catch (err) {
@@ -186,21 +177,9 @@ client.on(Events.MessageCreate, async (message) => {
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
     
-    // نقوم بجلب الرسالة التي ضغط المستخدم على زرها
     const message = await interaction.message.fetch();
-    
-    // نستخرج الروابط من المرفقات (Attachments) الموجودة في الرسالة الأصلية
-    // ملاحظة: الأفاتار هو المرفق الثاني والثالث.. والبنر هو الأول
     const attachments = Array.from(message.attachments.values());
-    if (attachments.length < 2) return interaction.reply({ content: '❌ لا توجد صور مرتبطة بهذه الرسالة.', ephemeral: true });
-
-    // البنر هو المرفق الأول، البقية هم الأفاتارات
-    const bannerUrl = attachments[0].url;
-    const avatarUrls = attachments.slice(1).map(att => att.url);
-
-    const files = [bannerUrl, ...avatarUrls].map((url, index) => 
-        new AttachmentBuilder(url, { name: `image${index}.png` })
-    );
+    const files = attachments.map((att, index) => new AttachmentBuilder(att.url, { name: `image${index}.png` }));
 
     if (interaction.customId === 'try_design') {
         await interaction.reply({ 
