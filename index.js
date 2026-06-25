@@ -182,32 +182,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isButton()) return;
     
     const data = designCache.get(interaction.message.id);
-    if (!data) return interaction.reply({ content: '❌ حدث خطأ: لا يمكن العثور على الصور في الذاكرة (ربما تمت إعادة تشغيل البوت). يرجى طلب التصميم مجدداً.', ephemeral: true });
+    if (!data) return interaction.reply({ content: '❌ حدث خطأ، يرجى طلب التصميم مجدداً.', ephemeral: true });
 
-    const { AttachmentBuilder } = require('discord.js'); // تأكد من استيرادها في الأعلى
-
-// ... داخل interactionCreate ...
-
-if (interaction.customId === 'try_design') {
-    // نقوم بتحويل روابط الصور إلى كائنات AttachmentBuilder
+    // تحضير الصور كملفات (Attachments) لضمان ظهورها كصور
     const files = [data.banner, ...data.avatars].map((url, index) => 
         new AttachmentBuilder(url, { name: `image${index}.png` })
     );
 
-    await interaction.reply({ 
-        content: 'خذ خذ وتوكل:', 
-        files: files, // هنا نرسل مصفوفة الـ Attachments وليس الروابط النصية
-        ephemeral: true 
-    });
-}
-     else if (interaction.customId === 'send_dm') {
+    if (interaction.customId === 'try_design') {
+        await interaction.reply({ 
+            content: 'خذ خذ وتوكل:', 
+            files: files, 
+            ephemeral: true 
+        });
+    } else if (interaction.customId === 'send_dm') {
         try {
             await interaction.user.send({ 
                 content: 'خذ خذ بس وفارق:', 
-                files: [data.banner, ...data.avatars] 
+                files: files // تم التعديل هنا لاستخدام الـ files المحضرة
             });
             await interaction.reply({ content: '✅ تم الإرسال للخاص!', ephemeral: true });
         } catch (err) {
+            console.error(err);
             await interaction.reply({ 
                 content: 'تسوقمها؟ كيف برسل لك الافتار وانت مسكر خاصك يخوي؟', 
                 ephemeral: true 
